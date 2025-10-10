@@ -45,7 +45,7 @@ export function AppSidebar() {
           
           <div className="flex items-center">
             <GalleryVerticalEnd className="h-4 w-4 m-2" />
-            <h1 className="text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+            <h1 className="text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden text-primary">
               Dormitory Evaluation System
             </h1>
           </div>
