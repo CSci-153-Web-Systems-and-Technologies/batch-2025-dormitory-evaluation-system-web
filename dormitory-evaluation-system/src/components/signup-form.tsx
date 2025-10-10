@@ -16,7 +16,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
 export function SignupForm({
@@ -26,6 +26,7 @@ export function SignupForm({
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
+  const supabase = createClient();
 
   const handleSignup = async (e: React.FormEvent) => {
   e.preventDefault();

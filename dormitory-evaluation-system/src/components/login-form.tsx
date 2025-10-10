@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
 export function LoginForm({
@@ -27,18 +27,19 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     let { error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password,
-  })
+      email,
+      password,
+    })
     if (error) {
       toast.error("Login failed: " + error.message);
     } else {
       toast.success("Login successful!");
-      router.push("/");
+      setTimeout(() => router.push("/dashboard"), 200);
     }
   }
 
