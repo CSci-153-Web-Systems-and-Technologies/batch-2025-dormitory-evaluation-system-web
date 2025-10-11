@@ -1,3 +1,4 @@
+"use client"
 import React from "react";
 import { DataTable } from "./data-table";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,64 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Dormer } from "@/types";
+import { createClient } from "@/lib/supabase/client"
+import { columns } from "./columns";
+import { DormerAddForm } from "./components/dormer-add-form";
+export default function DormersPage() {
+    const supabase = React.useMemo(() => createClient(), [])
+    const [dormers, setDormers] = React.useState<Dormer[]>([])
+    const [rooms, setRooms] = React.useState<string[]>([])
+    const [loading, setLoading] = React.useState(false)
 
-export default function DormersPage()
-{
+    const fetchRooms = React.useCallback(async () => {
+        try {
+            const { data, error } = await supabase.from("dormers").select("room")
+            if (error) {
+                console.error("Error fetching rooms:", error)
+                setRooms([])
+            } else {
+                const roomList = Array.from(
+                    new Set(
+                        (data ?? [])
+                            .map((item) => item.room)
+                            .filter((room): room is string => !!room)
+                    )
+                ).sort()
+                setRooms(roomList)
+            }
+        } catch (error) {
+            console.error("Unexpected error fetching rooms:", error)
+            setRooms([])
+        }
+    }, [supabase])
+
+    React.useEffect(() => {
+        fetchRooms()
+    }, [fetchRooms])
+
+    const fetchDormers = React.useCallback(async () => {
+        setLoading(true)
+        try {
+            const { data, error } = await supabase.from("dormers").select("*")
+            if (error) {
+                console.error("Error fetching dormers:", error)
+                setDormers([])
+            } else {
+                setDormers((data ?? []) as Dormer[])
+            }
+        } catch (error) {
+            console.error("Unexpected error fetching dormers:", error)
+            setDormers([])
+        } finally {
+            setLoading(false)
+        }
+    }, [supabase])
+
+    React.useEffect(() => {
+        fetchDormers()
+    }, [fetchDormers])
+
     return (
     <div className="p-6 sm:p-8 lg:p-10 w-full space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -49,8 +105,16 @@ export default function DormersPage()
                     <DropdownMenuContent>
                         <DropdownMenuLabel>Room No.</DropdownMenuLabel>
                         <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup>
+                            {rooms.map((room) => (
+                                <DropdownMenuRadioItem key={room} value={room}>
+                                    {room}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                 </DropdownMenu>
+                <DormerAddForm trigger={
                 <Button className="w-full sm:w-auto flex items-center justify-center gap-1">
                     <span className="block sm:hidden">
                         <svg
@@ -66,10 +130,19 @@ export default function DormersPage()
                     </span>
                     <span className="hidden sm:block">Add Dormer</span>
                 </Button>
+                }/>
             </div>
         </div>
         <div className="w-full">
-            <DataTable columns={[]} data={[]} />
+            <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">{loading ? "Loading..." : `${dormers.length} dormers`}</div>
+                <div>
+                    <Button onClick={fetchDormers} variant="ghost" className="text-sm">
+                        Refresh
+                    </Button>
+                </div>
+            </div>
+            <DataTable columns={columns} data={dormers} />
         </div>
     </div>
     );
