@@ -22,7 +22,7 @@ import { GalleryVerticalEnd } from "lucide-react"
 // Menu items.
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Dormers", url: "/#", icon: Users },
+  { title: "Dormers", url: "/dormers", icon: Users },
   { title: "Evaluation", url: "/#", icon: FileText },
   { title: "Results", url: "/#", icon: BarChart },
   { title: "Settings", url: "/#", icon: Settings },
