@@ -21,12 +21,13 @@ import { createClient } from "@/lib/supabase/client"
 import { useForm } from "react-hook-form"
 import {Input} from "@/components/ui/input"
 import {toast} from "sonner"
-export function DormerAddForm({ trigger }: { trigger: React.ReactNode }) {
+export function DormerAddForm({ trigger, onSuccess }: { trigger: React.ReactNode, onSuccess?: () => void }) {
     const supabase = createClient()
 
     const form = useForm<Omit<Dormer, "id">>({
         defaultValues: {
-            full_name: "",
+            first_name: "",
+            last_name: "",
             email: "",
             room: "",
             course_year: "",
@@ -35,13 +36,15 @@ export function DormerAddForm({ trigger }: { trigger: React.ReactNode }) {
 
     const handleSubmit = async (data: Omit<Dormer, "id">) => {
         try {
-            const { error } = await supabase.from("dormers").insert([data])
+            const { data: inserted, error } = await supabase.from("dormers").insert([data]).select()
+            console.log("Insert result:", { inserted, error })
             if (error) {
                 console.error("Error adding dormer:", error)
                 toast.error("Failed to add dormer. Please try again.")
             } else {
                 toast.success("Dormer added successfully!")
                 form.reset()
+                onSuccess?.()
             }
         } catch (error) {
             console.error("Unexpected error adding dormer:", error)
@@ -62,15 +65,29 @@ export function DormerAddForm({ trigger }: { trigger: React.ReactNode }) {
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
                     <Field>
                         <FieldLabel>
-                            <FieldTitle>Full Name</FieldTitle>
-                            <FieldDescription>Enter the full name of the dormer.</FieldDescription>
+                            <FieldTitle>First Name</FieldTitle>
+                            <FieldDescription>Enter the first name of the dormer.</FieldDescription>
                             <FieldError />
                         </FieldLabel>
                         <FieldContent>
                             <Input
                                 type="text"
-                                placeholder="Juan Dela Cruz"
-                                {...form.register("full_name", { required: true })}
+                                placeholder="Juan"
+                                {...form.register("first_name", { required: true })}
+                                className="w-full rounded-md border border-input bg-transparent px-3 py-2 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            />
+                        </FieldContent>
+                        <FieldError />
+                        <FieldLabel>
+                            <FieldTitle>Last Name</FieldTitle>
+                            <FieldDescription>Enter the last name of the dormer.</FieldDescription>
+                            <FieldError />
+                        </FieldLabel>
+                        <FieldContent>
+                            <Input
+                                type="text"
+                                placeholder="Dela Cruz"
+                                {...form.register("last_name", { required: true })}
                                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             />
                         </FieldContent>
