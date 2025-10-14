@@ -7,6 +7,7 @@ import { ArrowUpDown, MoreHorizontal, Edit, Delete} from "lucide-react"
 import React from "react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel} from "@/components/ui/dropdown-menu"
 import { DormerEditInfo } from "./components/dormer-edit-info"
+import { DormerDelete } from "./components/dormer-delete"
 
 
 export const columns: ColumnDef<Dormer>[] = [
@@ -77,7 +78,8 @@ export const columns: ColumnDef<Dormer>[] = [
     accessorKey: "actions",
     header: "Actions",
     cell: ({ row }) => {
-      const [open, setOpen] = React.useState(false)
+      const [openEdit, setOpenEdit] = React.useState(false)
+      const [openDelete, setOpenDelete] = React.useState(false)
       return (
         <>
           <DropdownMenu>
@@ -90,17 +92,18 @@ export const columns: ColumnDef<Dormer>[] = [
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setOpen(true)}>
+              <DropdownMenuItem onSelect={() => setOpenEdit(true)}>
                 <Edit className="ml-2 h-4 w-4 text-primary" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setOpenDelete(true)}>
                 <Delete className="ml-2 h-4 w-4 text-red-500" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <DormerEditInfo dormer={row.original} open={open} onOpenChange={setOpen} onSuccess={() => setOpen(false)} />
+          <DormerEditInfo dormer={row.original} open={openEdit} onOpenChange={setOpenEdit} onSuccess={() => setOpenEdit(false)} />
+          <DormerDelete dormer={row.original} open={openDelete} onOpenChange={setOpenDelete} onSuccess={() => setOpenDelete(false)} />
         </>
       )
     },
