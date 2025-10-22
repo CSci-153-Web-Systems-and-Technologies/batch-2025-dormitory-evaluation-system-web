@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { EvaluationAddForm } from '../evaluation/components/evaluation-add-form'
-import { Evaluations } from '@/types'
+import { EvaluationPeriod } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -19,16 +18,16 @@ import {
 
 export default function EvaluationPage() {
     const supabase = React.useMemo(() => createClient(), [])
-    const [evaluations, setEvaluations] = React.useState<Evaluations[]>([])
+    const [evaluations, setEvaluations] = React.useState<EvaluationPeriod[]>([])
 
     const fetchEvaluations = React.useCallback(async () => {
         try {
-            const { data, error } = await supabase.from("evaluations").select("*")
+            const { data, error } = await supabase.from("evaluation_period").select("*")
             if (error) {
                 console.error("Error fetching evaluations:", error)
                 setEvaluations([])
             } else {
-                setEvaluations(data as Evaluations[])
+                setEvaluations(data as EvaluationPeriod[])
             }
         } catch (error) {
             console.error("Unexpected error fetching evaluations:", error)
@@ -42,7 +41,7 @@ export default function EvaluationPage() {
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
-                table: 'evaluations',
+                table: 'evaluation_period',
             }, () => {
                 fetchEvaluations();
             })
@@ -74,9 +73,6 @@ export default function EvaluationPage() {
                                             <CardHeader>
                                                 <CardTitle>{evaluation.title}</CardTitle>
                                             </CardHeader>
-                                            <CardContent className="flex-1 flex flex-col justify-center">
-                                                <p className="text-sm text-muted-foreground">{evaluation.description}</p>
-                                            </CardContent>
                                             <CardFooter>
                                                 <CardAction className="text-primary hover:underline">View Details</CardAction>
                                             </CardFooter>

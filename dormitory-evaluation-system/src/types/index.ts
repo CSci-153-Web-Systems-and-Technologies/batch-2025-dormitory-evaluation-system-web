@@ -6,14 +6,20 @@ export type Dormer = {
     room: string;
     course_year: string;
 }
-export type Evaluations = {
+export type EvaluationPeriod = {
     id: string;
     title: string;
-    description: string;
     created_at: string;
     school_year_id: string;
+    semester: '1' | '2';
+    status: 'pending' | 'active' | 'closed';
 }
 export type SchoolYear = {
     id: string;
     year: string;
+}
+export type PeriodEvaluators = {
+    id: string;
+    evaluation_period_id: string;
+    dormer_id: string;
 }
