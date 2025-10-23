@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Car, Plus } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { EvaluationAddForm } from '../evaluation/components/evaluation-add-form'
 import { EvaluationPeriod } from '@/types'
@@ -15,11 +15,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Badge } from '@/components/ui/badge'
+import { EvaluationDelete } from '../evaluation/components/evaluation-delete'
 
 export default function EvaluationPage() {
     const supabase = React.useMemo(() => createClient(), [])
     const [evaluations, setEvaluations] = React.useState<EvaluationPeriod[]>([])
-
+    
     const fetchEvaluations = React.useCallback(async () => {
         try {
             const { data, error } = await supabase.from("evaluation_period").select("*")
@@ -69,13 +71,37 @@ export default function EvaluationPage() {
                             ) : (
                                 <div className="grid grid-cols-1 gap-4 w-full">
                                     {evaluations.map((evaluation) => (
-                                        <Card key={evaluation.id} className="w-full h-48 flex flex-col">
+                                        <Card key={evaluation.id} className="w-full">
                                             <CardHeader>
-                                                <CardTitle>{evaluation.title}</CardTitle>
+                                                <CardTitle className="text-2xl font-semibold">{evaluation.title}</CardTitle>
                                             </CardHeader>
-                                            <CardFooter>
-                                                <CardAction className="text-primary hover:underline">View Details</CardAction>
-                                            </CardFooter>
+                                            <CardContent>
+                                                {evaluation.semester === '1' ? (
+                                                    <p className="text-sm text-muted-foreground">Semester: 1st Semester</p>
+                                                ) : evaluation.semester === '2' ? (
+                                                    <p className="text-sm text-muted-foreground">Semester: 2nd Semester</p>
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground">Semester: Unknown</p>
+                                                )}
+                                                {evaluation.status === 'pending' ? (
+                                                    <Badge className="mt-2 bg-yellow-100 text-yellow-800">Pending</Badge>
+                                                ) : evaluation.status === 'active' ? (
+                                                    <Badge className="mt-2 bg-green-100 text-green-800">Active</Badge>
+                                                ) : (
+                                                    <Badge className="mt-2 bg-red-100 text-red-800">Closed</Badge>
+                                                )}
+                                            <CardAction>
+                                                <div className="mt-4 flex flex-row gap-2">
+                                                    <Button>Add Criteria</Button>
+                                                    <Button>Manage Evaluators</Button>
+                                                    <EvaluationDelete
+                                                        evaluationId={evaluation.id}
+                                                        onSuccess={fetchEvaluations}
+                                                        trigger={<Button variant="destructive">Delete</Button>}
+                                                    />
+                                                </div>
+                                            </CardAction>
+                                            </CardContent>
                                         </Card>
                                     ))}
                                 </div>
