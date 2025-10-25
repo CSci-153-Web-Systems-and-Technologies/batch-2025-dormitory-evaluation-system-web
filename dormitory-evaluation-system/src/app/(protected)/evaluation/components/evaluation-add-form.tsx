@@ -282,7 +282,7 @@ export function EvaluationAddForm({ trigger, onSuccess }: { trigger: React.React
             </DialogTrigger>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>
+                    <DialogTitle className="text-2xl text-primary">
                         {step === 1 ? "Add Evaluation Session" : "Select Evaluators"}
                     </DialogTitle>
                 </DialogHeader>

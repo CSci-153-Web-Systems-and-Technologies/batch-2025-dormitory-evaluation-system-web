@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from '@/components/ui/badge'
 import { EvaluationDelete } from '../evaluation/components/evaluation-delete'
+import { ManageEvaluators } from '../evaluation/components/manage-evaluators'
 
 export default function EvaluationPage() {
     const supabase = React.useMemo(() => createClient(), [])
@@ -61,19 +62,24 @@ export default function EvaluationPage() {
                     </div>
                 </div>
                 <div>
-                    <EvaluationAddForm onSuccess={fetchEvaluations} trigger={
-                        <Button className="btn btn-primary">Create New Evaluation Session <Plus className="ml-2 h-4 w-4" /></Button>
-                    } />
-                    <ScrollArea className="mt-4">
-                        <div className="w-full min-h[200px] border border-dashed rounded-md p-4 flex items-center justify-center">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <EvaluationAddForm onSuccess={fetchEvaluations} trigger={
+                            <Button className="btn btn-primary w-full sm:w-auto">Create New Evaluation Session <Plus className="ml-2 h-4 w-4" /></Button>
+                        } />
+                    </div>
+
+                    <ScrollArea className="mt-4 h-[60vh] rounded-md border border-dashed p-3">
+                        <div className="w-full h-full">
                             {evaluations.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">No evaluation sessions found. Create a new session to get started.</p>
+                                <div className="flex items-center justify-center h-full py-8">
+                                    <p className="text-sm text-muted-foreground">No evaluation sessions found. Create a new session to get started.</p>
+                                </div>
                             ) : (
-                                <div className="grid grid-cols-1 gap-4 w-full">
+                                <div className="grid grid-row gap-4 w-full">
                                     {evaluations.map((evaluation) => (
                                         <Card key={evaluation.id} className="w-full">
                                             <CardHeader>
-                                                <CardTitle className="text-2xl font-semibold">{evaluation.title}</CardTitle>
+                                                <CardTitle className="text-xl sm:text-2xl font-semibold">{evaluation.title}</CardTitle>
                                             </CardHeader>
                                             <CardContent>
                                                 {evaluation.semester === '1' ? (
@@ -90,18 +96,22 @@ export default function EvaluationPage() {
                                                 ) : (
                                                     <Badge className="mt-2 bg-red-100 text-red-800">Closed</Badge>
                                                 )}
-                                            <CardAction>
-                                                <div className="mt-4 flex flex-row gap-2">
-                                                    <Button>Add Criteria</Button>
-                                                    <Button>Manage Evaluators</Button>
+                                            </CardContent>
+                                            <CardFooter>
+                                                <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+                                                    <Button className="w-full sm:w-auto">Add Criteria</Button>
+                                                    <ManageEvaluators
+                                                        evaluationId={evaluation.id}
+                                                        onSuccess={fetchEvaluations}
+                                                        trigger={<Button className="w-full sm:w-auto">Manage Evaluators</Button>}
+                                                    />
                                                     <EvaluationDelete
                                                         evaluationId={evaluation.id}
                                                         onSuccess={fetchEvaluations}
-                                                        trigger={<Button variant="destructive">Delete</Button>}
+                                                        trigger={<Button variant="destructive" className="w-full sm:w-auto">Delete</Button>}
                                                     />
                                                 </div>
-                                            </CardAction>
-                                            </CardContent>
+                                            </CardFooter>
                                         </Card>
                                     ))}
                                 </div>
