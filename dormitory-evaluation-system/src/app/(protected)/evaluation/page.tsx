@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { EvaluationDelete } from '../evaluation/components/evaluation-delete'
 import { ManageEvaluators } from '../evaluation/components/manage-evaluators'
+import { CriteriaAdd } from './components/criteria-add'
 
 export default function EvaluationPage() {
     const supabase = React.useMemo(() => createClient(), [])
@@ -99,7 +100,10 @@ export default function EvaluationPage() {
                                             </CardContent>
                                             <CardFooter>
                                                 <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
-                                                    <Button className="w-full sm:w-auto">Add Criteria</Button>
+                                                    <CriteriaAdd evaluationId={evaluation.id}
+                                                    trigger={
+                                                    <Button className="w-full sm:w-auto">Add Criteria</Button>} />
+
                                                     <ManageEvaluators
                                                         evaluationId={evaluation.id}
                                                         onSuccess={fetchEvaluations}

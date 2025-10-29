@@ -23,3 +23,16 @@ export type PeriodEvaluators = {
     evaluation_period_id: string;
     dormer_id: string;
 }
+export type Criteria = {
+    id: string;
+    name: string;
+    description: string;
+    type: 'objective' | 'subjective';
+}
+export type PeriodCriteria = {
+    id: string;
+    evaluation_period_id: string;
+    criterion_id: string;
+    weight: number;
+    max_score: number;
+}
