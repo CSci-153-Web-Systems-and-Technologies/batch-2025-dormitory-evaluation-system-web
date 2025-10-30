@@ -209,7 +209,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                                             <div className="flex justify-between items-center">
                                                             <div className="flex flex-col">
                                                                 <div className="flex items-center gap-2">
-                                                                <span className="font-semibold text-lg">{crit?.name}</span>
+                                                                <span className="font-semibold text-lg text-primary">{crit?.name}</span>
                                                                 {crit?.type === 'objective' ? (
                                                                     <Badge className="w-fit bg-blue-100 text-blue-800 mb-1">Objective</Badge>
                                                                 ) : (
@@ -217,7 +217,12 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                                                 )}
                                                                 </div>
                                                                 <span className="text-sm text-muted-foreground">{crit?.description}</span>
-                                                                <span className="text-sm mt-2">Weight: {pc.weight}</span>
+                                                                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                                        <Badge className="bg-slate-100 text-slate-800">Weight: {pc.weight}%</Badge>
+                                                                        {pc.max_score !== undefined && (
+                                                                            <Badge className="bg-slate-100 text-slate-800">Max: {pc.max_score}</Badge>
+                                                                        )}
+                                                                    </div>
                                                             </div>
                                                                 <Input type="checkbox" className="w-5 h-5 mt-2" checked={selectedPeriodCriteria.some(selected => selected.id === pc.id)} onChange={(e) => {
                                                                     if (e.target.checked) {
@@ -269,7 +274,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                                 <CardContent>
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-semibold text-lg">{crit.name}</span>
+                                                            <span className="font-semibold text-lg text-primary">{crit.name}</span>
                                                             {crit.type === 'objective' ? (
                                                                 <Badge className="w-fit bg-blue-100 text-blue-800 mb-1">Objective</Badge>
                                                             ) : (
