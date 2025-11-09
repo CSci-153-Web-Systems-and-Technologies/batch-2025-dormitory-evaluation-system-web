@@ -2,14 +2,13 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Users, Trash2 } from 'lucide-react'
+import { SquareChartGantt, Users, Trash2, Plus} from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { EvaluationAddForm } from '../evaluation/components/evaluation-add-form'
 import { EvaluationPeriod } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import {
   Card,
-  CardAction,
   CardContent,
   CardFooter,
   CardHeader,
@@ -106,7 +105,7 @@ export default function EvaluationPage() {
                                                         <ButtonGroup className="w-full sm:w-auto ">
                                                             <CriteriaAdd
                                                                 evaluationId={evaluation.id}
-                                                                trigger={<Button className="w-full sm:w-auto"><Plus className="-ml-1 mr-2 h-4 w-4" />Add Criteria</Button>}
+                                                                trigger={<Button className="w-full sm:w-auto"><SquareChartGantt className="-ml-1 mr-2 h-4 w-4" />Manage Criteria</Button>}
                                                             />
                                                             <ButtonGroupSeparator />
                                                             <ManageEvaluators

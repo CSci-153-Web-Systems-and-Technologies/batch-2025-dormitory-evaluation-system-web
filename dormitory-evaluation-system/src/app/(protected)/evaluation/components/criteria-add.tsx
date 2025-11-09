@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from "@/components/ui/card"
 import React from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, PlusIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"
@@ -34,6 +34,7 @@ import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Criteria, PeriodCriteria } from "@/types";
 import { Progress } from "@/components/ui/progress"
+import CriterionAdd from "./criterion-add"
 export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trigger: React.ReactNode}) {
     const supabase = createClient();
     const [open, setOpen] = React.useState(false);
@@ -42,15 +43,30 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
     const [currentWeight, setCurrentWeight] = React.useState(0);
     const [inputWeights, setInputWeights] = React.useState<Record<string, string>>({});
     const [inputMaxScores, setInputMaxScores] = React.useState<Record<string, string>>({});
-    const sumTyped = React.useMemo(() => Object.values(inputWeights).reduce((s, v) => s + (parseInt(v || "0", 10) || 0), 0), [inputWeights]);
-    const prospectiveTotal = Math.min(100, currentWeight + sumTyped);
-    const [selectedPeriodCriteria, setSelectedPeriodCriteria] = React.useState<PeriodCriteria []>([]);
-    const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
-    const [isDeleting, setIsDeleting] = React.useState(false);
     const [editingId, setEditingId] = React.useState<string | null>(null);
     const [editWeights, setEditWeights] = React.useState<Record<string, string>>({});
     const [editMaxScores, setEditMaxScores] = React.useState<Record<string, string>>({});
     const [editLoading, setEditLoading] = React.useState(false);
+    const sumTyped = React.useMemo(() => Object.values(inputWeights).reduce((s, v) => s + (parseInt(v || "0", 10) || 0), 0), [inputWeights]);
+
+    const editDelta = React.useMemo(() => {
+        if (!editingId) return 0;
+        const pc = periodCriteria.find(p => p.id === editingId);
+        if (!pc) return 0;
+        const raw = editWeights[editingId];
+        if (raw === "" || raw === undefined) return 0;
+        const parsed = parseInt(raw, 10);
+        if (isNaN(parsed)) return 0;
+        return parsed - pc.weight;
+    }, [editingId, editWeights, periodCriteria]);
+
+    const prospectiveTotal = React.useMemo(() => {
+        const total = currentWeight + sumTyped + editDelta;
+        return Math.min(100, Math.max(0, total));
+    }, [currentWeight, sumTyped, editDelta]);
+    const [selectedPeriodCriteria, setSelectedPeriodCriteria] = React.useState<PeriodCriteria []>([]);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
+    const [isDeleting, setIsDeleting] = React.useState(false);
 
     const handleDeleteSelectedPeriodCriteria = async () => {
         if (!selectedPeriodCriteria || selectedPeriodCriteria.length === 0) return;
@@ -74,28 +90,28 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         toast.success("Selected period criteria deleted");
     };
 
-    const startEdit = (pcId: string) => {
+    const startEdit = React.useCallback((pcId: string) => {
         const pc = periodCriteria.find(p => p.id === pcId);
         if (!pc) return;
         setEditingId(pc.id);
         setEditWeights(prev => ({ ...prev, [pc.id]: String(pc.weight) }));
         setEditMaxScores(prev => ({ ...prev, [pc.id]: String((pc as any).max_score ?? "") }));
-    };
+    }, [periodCriteria]);
 
-    const cancelEdit = (pcId: string) => {
+    const cancelEdit = React.useCallback((pcId: string) => {
         setEditingId(null);
         setEditWeights(prev => { const copy = { ...prev }; delete copy[pcId]; return copy; });
         setEditMaxScores(prev => { const copy = { ...prev }; delete copy[pcId]; return copy; });
-    };
+    }, []);
 
-    const saveEdit = async (pcId: string) => {
+    const saveEdit = React.useCallback(async (pcId: string) => {
         const pc = periodCriteria.find(p => p.id === pcId);
         if (!pc) return;
         const rawWeight = editWeights[pc.id];
         const rawMax = editMaxScores[pc.id];
         const weight = parseInt(rawWeight ?? String(pc.weight), 10);
         const maxScore = rawMax ? parseInt(rawMax, 10) : null;
-        const allowed = Math.max(0, 100 - currentWeight + pc.weight);
+        const allowed = Math.max(0, 100 - currentWeight + pc.weight - sumTyped);
         if (isNaN(weight) || weight < 1) { toast.error("Please enter a valid weight (>= 1)"); return; }
         if (weight > allowed) { toast.error("Weight cannot exceed remaining percentage"); return; }
         if (maxScore !== null && (isNaN(maxScore) || maxScore < 1)) { toast.error("Please enter a valid max score (>= 1)"); return; }
@@ -114,42 +130,72 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         setEditLoading(false);
         setEditingId(null);
         toast.success("Criteria updated");
-    };
-    const isSelected = (pcId: string) => selectedPeriodCriteria.some(s => s.id === pcId);
-    const toggleSelect = (pcId: string, checked: boolean) => {
+    }, [periodCriteria, editWeights, editMaxScores, currentWeight, sumTyped, supabase]);
+    const isSelected = React.useCallback((pcId: string) => selectedPeriodCriteria.some(s => s.id === pcId), [selectedPeriodCriteria]);
+    const toggleSelect = React.useCallback((pcId: string, checked: boolean) => {
         const pc = periodCriteria.find(p => p.id === pcId);
         if (!pc) return;
         if (checked) setSelectedPeriodCriteria(prev => [...prev, pc]);
         else setSelectedPeriodCriteria(prev => prev.filter(item => item.id !== pcId));
-    }
-    const handlePeriodCheckboxChange = (pcId: string) => (e: React.ChangeEvent<HTMLInputElement>) => toggleSelect(pcId, e.target.checked);
-    const closeConfirmDelete = () => setConfirmDeleteOpen(false);
-    const handleEditWeightChange = (pcId: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-        const raw = e.target.value;
-        if (raw === "") {
-            setEditWeights(prev => ({ ...prev, [pcId]: "" }));
-            return;
-        }
+    }, [periodCriteria]);
+    const closeConfirmDelete = React.useCallback(() => setConfirmDeleteOpen(false), []);
+    
+    const setEditWeightFor = React.useCallback((pcId: string, raw: string) => {
+        if (raw === "") { setEditWeights(prev => ({ ...prev, [pcId]: "" })); return; }
         let n = parseInt(raw, 10);
         if (isNaN(n)) return;
         const pc = periodCriteria.find(p => p.id === pcId);
-        const allowed = pc ? Math.max(0, 100 - currentWeight + pc.weight) : 0;
+        const allowed = pc ? Math.max(0, 100 - currentWeight + pc.weight - sumTyped) : 0;
         if (n > allowed) n = allowed;
         if (n < 0) n = 0;
         setEditWeights(prev => ({ ...prev, [pcId]: String(n) }));
-    };
-    const handleEditMaxScoreChange = (pcId: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEditMaxScores(prev => ({ ...prev, [pcId]: e.target.value }));
-    };
-    const makeStartEdit = (pcId: string) => () => startEdit(pcId);
-    const makeSaveEdit = (pcId: string) => () => saveEdit(pcId);
-    const makeCancelEdit = (pcId: string) => () => cancelEdit(pcId);
-    const selectVisible = () => setSelectedPeriodCriteria(periodCriteria);
-    const clearSelected = () => setSelectedPeriodCriteria([]);
-    const openConfirmDelete = () => setConfirmDeleteOpen(true);
-    const makeAddHandler = (critId: string) => () => handleAddClick(critId);
-    const makeHandleWeightChange = (critId: string) => (e: React.ChangeEvent<HTMLInputElement>) => handleWeightChange(critId, e.target.value);
-    const makeHandleMaxScoreChange = (critId: string) => (e: React.ChangeEvent<HTMLInputElement>) => handleMaxScoreChange(critId, e.target.value);
+    }, [periodCriteria, currentWeight, sumTyped]);
+
+    const setEditMaxFor = React.useCallback((pcId: string, raw: string) => {
+        setEditMaxScores(prev => ({ ...prev, [pcId]: raw }));
+    }, []);
+
+    const selectVisible = React.useCallback(() => setSelectedPeriodCriteria(periodCriteria), [periodCriteria]);
+    const clearSelected = React.useCallback(() => setSelectedPeriodCriteria([]), []);
+    const openConfirmDelete = React.useCallback(() => setConfirmDeleteOpen(true), []);
+
+    const startEditHandlers = React.useMemo(() => {
+        const m: Record<string, () => void> = {};
+        periodCriteria.forEach(pc => { m[pc.id] = () => startEdit(pc.id); });
+        return m;
+    }, [periodCriteria, startEdit]);
+
+    const saveEditHandlers = React.useMemo(() => {
+        const m: Record<string, () => void> = {};
+        periodCriteria.forEach(pc => { m[pc.id] = () => saveEdit(pc.id); });
+        return m;
+    }, [periodCriteria, saveEdit]);
+
+    const cancelEditHandlers = React.useMemo(() => {
+        const m: Record<string, () => void> = {};
+        periodCriteria.forEach(pc => { m[pc.id] = () => cancelEdit(pc.id); });
+        return m;
+    }, [periodCriteria, cancelEdit]);
+
+    const periodCheckboxHandlers = React.useMemo(() => {
+        const m: Record<string, (e: React.ChangeEvent<HTMLInputElement>) => void> = {};
+        periodCriteria.forEach(pc => { m[pc.id] = (e) => toggleSelect(pc.id, e.target.checked); });
+        return m;
+    }, [periodCriteria, toggleSelect]);
+
+    const editWeightHandlers = React.useMemo(() => {
+        const m: Record<string, (e: React.ChangeEvent<HTMLInputElement>) => void> = {};
+        periodCriteria.forEach(pc => { m[pc.id] = (e) => setEditWeightFor(pc.id, e.target.value); });
+        return m;
+    }, [periodCriteria, setEditWeightFor]);
+
+    const editMaxHandlers = React.useMemo(() => {
+        const m: Record<string, (e: React.ChangeEvent<HTMLInputElement>) => void> = {};
+        periodCriteria.forEach(pc => { m[pc.id] = (e) => setEditMaxFor(pc.id, e.target.value); });
+        return m;
+    }, [periodCriteria, setEditMaxFor]);
+
+    
 
     React.useEffect(() => {
         const fetchCurrentTotalWeight = async () => {
@@ -247,6 +293,23 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         if (isNaN(maxScore) || maxScore < 1) { toast.error("Please enter a valid max score (>= 1)"); return; }
         await handleAddCriteria(critId, weight, maxScore);
     };
+    const addHandlers = React.useMemo(() => {
+        const m: Record<string, () => void> = {};
+        criteria.forEach(c => { m[c.id] = () => handleAddClick(c.id); });
+        return m;
+    }, [criteria, handleAddClick]);
+
+    const addWeightChangeHandlers = React.useMemo(() => {
+        const m: Record<string, (e: React.ChangeEvent<HTMLInputElement>) => void> = {};
+        criteria.forEach(c => { m[c.id] = (e) => handleWeightChange(c.id, e.target.value); });
+        return m;
+    }, [criteria, handleWeightChange]);
+
+    const addMaxChangeHandlers = React.useMemo(() => {
+        const m: Record<string, (e: React.ChangeEvent<HTMLInputElement>) => void> = {};
+        criteria.forEach(c => { m[c.id] = (e) => handleMaxScoreChange(c.id, e.target.value); });
+        return m;
+    }, [criteria, handleMaxScoreChange]);
     return (
         <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
@@ -288,7 +351,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                             {periodCriteria.map((pc) => {
                                                 const crit = criteria.find(c => c.id === pc.criterion_id);
                                                 const isEditing = editingId === pc.id;
-                                                const allowed = Math.max(0, 100 - currentWeight + pc.weight);
+                                                const allowed = Math.max(0, 100 - currentWeight + pc.weight - sumTyped);
                                                 return (
                                                     <Card key={pc.id}>
                                                         <CardContent>
@@ -313,20 +376,20 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                                                                 min={1}
                                                                                 max={allowed}
                                                                                 value={editWeights[pc.id] ?? String(pc.weight)}
-                                                                                onChange={handleEditWeightChange(pc.id)}
+                                                                                onChange={editWeightHandlers[pc.id]}
                                                                                 className="w-24"
                                                                             />
                                                                             <Input
                                                                                 type="number"
                                                                                 min={1}
                                                                                 value={editMaxScores[pc.id] ?? String((pc as any).max_score ?? "")}
-                                                                                onChange={handleEditMaxScoreChange(pc.id)}
+                                                                                onChange={editMaxHandlers[pc.id]}
                                                                                 className="w-28"
                                                                             />
                                                                         </div>
                                                                         <div className="mt-2 flex justify-end gap-2">
-                                                                            <Button onClick={makeSaveEdit(pc.id)} disabled={editLoading}>{editLoading ? 'Saving...' : 'Save'}</Button>
-                                                                            <Button variant="ghost" onClick={makeCancelEdit(pc.id)}>Cancel</Button>
+                                                                            <Button onClick={saveEditHandlers[pc.id]} disabled={editLoading}>{editLoading ? 'Saving...' : 'Save'}</Button>
+                                                                            <Button variant="ghost" onClick={cancelEditHandlers[pc.id]}>Cancel</Button>
                                                                         </div>
                                                                     </div>
                                                                 ) : (
@@ -341,9 +404,9 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                                             <div className="flex flex-row items-center gap-2">
                                                                 <Pencil 
                                                                     className="cursor-pointer text-primary w-5 h-5"
-                                                                    onClick={makeStartEdit(pc.id)}
+                                                                    onClick={startEditHandlers[pc.id]}
                                                                 />
-                                                                <Input type="checkbox" className="w-5 h-5" checked={isSelected(pc.id)} onChange={handlePeriodCheckboxChange(pc.id)} />
+                                                                <Input type="checkbox" className="w-5 h-5" checked={isSelected(pc.id)} onChange={periodCheckboxHandlers[pc.id]} />
                                                             </div>
                                                             </div>
                                                         </CardContent>
@@ -371,7 +434,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                         </AlertDialogContent>
                                     </AlertDialog>
                                         <div className="flex justify-end gap-2">
-                                        <Button className="mt-4" disabled={selectedPeriodCriteria.length === 0} variant="destructive" onClick={openConfirmDelete}>Delete Selected Criteria</Button>
+                                        <Button className="mt-4" disabled={selectedPeriodCriteria.length === 0} variant="destructive" onClick={openConfirmDelete}>Delete</Button>
                                     </div>
                                 </div>
                             </TabsContent>
@@ -408,7 +471,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                                             max={getAddAllowed(crit.id)}
                                                             value={inputWeights[crit.id] ?? ""}
                                                             disabled={disableInputs}
-                                                            onChange={makeHandleWeightChange(crit.id)}
+                                                            onChange={addWeightChangeHandlers[crit.id]}
                                                         />
                                                         <Input
                                                             type="number"
@@ -418,19 +481,27 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                                             min={1}
                                                             value={inputMaxScores[crit.id] ?? ""}
                                                             disabled={disableInputs}
-                                                            onChange={makeHandleMaxScoreChange(crit.id)}
+                                                            onChange={addMaxChangeHandlers[crit.id]}
                                                         />
                                                     </div>
-
-                                                    <div className="m-2 flex justify-end">
-                                                        <Button disabled={disableInputs} onClick={makeAddHandler(crit.id)}>
+                                                </CardContent>
+                                                
+                                                    <div className="flex justify-end mr-4">
+                                                        <Button disabled={disableInputs} onClick={addHandlers[crit.id]}>
                                                             {alreadyAdded ? "Added" : "Add Criteria"}
                                                         </Button>
                                                     </div>
-                                                </CardContent>
                                             </Card>
                                         );
                                     })}
+                                    <CriterionAdd
+                                        trigger={
+                                            <Button variant="outline">
+                                                <PlusIcon className="ml-2" />
+                                            </Button>
+                                        }
+                                        onAdded={(c) => setCriteria(prev => [...prev, c])}
+                                    />
                                 </div>
                             </ScrollArea>
                         </div>
