@@ -202,7 +202,7 @@ export function ManageEvaluators({evaluationId, trigger, onSuccess}: { evaluatio
                     </TabsList>
                     <TabsContent value="evaluators">
                         <div className="space-y-4">
-                        <div className="mb-3 flex items-center gap-2">
+                        <div className="flex justify-end gap-2 mb-4">
                             <Button variant="ghost" onClick={() => {
                                 const visibleIds = dormers.map(d => d.id)
                                 setSelectedEvaluators(prev => Array.from(new Set([...prev, ...visibleIds])))
@@ -234,7 +234,7 @@ export function ManageEvaluators({evaluationId, trigger, onSuccess}: { evaluatio
                                                     <p className="text-sm text-muted-foreground">{dormer.email} · <span className="text-muted-foreground">Room {dormer.room}</span></p>
                                                 </div>
                                                 <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="checkbox" className="w-5 h-5" checked={selectedEvaluators.includes(dormer.id)} onChange={() => handleEvaluatorSelect(dormer.id)} />
+                                                    <Input type="checkbox" className="w-5 h-5" checked={selectedEvaluators.includes(dormer.id)} onChange={() => handleEvaluatorSelect(dormer.id)} />
                                                     <span className="sr-only">Select evaluator</span>
                                                 </label>
                                             </CardContent>

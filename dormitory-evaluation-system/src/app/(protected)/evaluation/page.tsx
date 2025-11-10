@@ -2,14 +2,13 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Car, Plus } from 'lucide-react'
+import { SquareChartGantt, Users, Trash2, Plus} from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { EvaluationAddForm } from '../evaluation/components/evaluation-add-form'
 import { EvaluationPeriod } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import {
   Card,
-  CardAction,
   CardContent,
   CardFooter,
   CardHeader,
@@ -18,6 +17,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { EvaluationDelete } from '../evaluation/components/evaluation-delete'
 import { ManageEvaluators } from '../evaluation/components/manage-evaluators'
+import { CriteriaAdd } from './components/criteria-add'
+import { ButtonGroup
+, ButtonGroupSeparator
+ } from '@/components/ui/button-group'
 
 export default function EvaluationPage() {
     const supabase = React.useMemo(() => createClient(), [])
@@ -97,21 +100,28 @@ export default function EvaluationPage() {
                                                     <Badge className="mt-2 bg-red-100 text-red-800">Closed</Badge>
                                                 )}
                                             </CardContent>
-                                            <CardFooter>
-                                                <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
-                                                    <Button className="w-full sm:w-auto">Add Criteria</Button>
-                                                    <ManageEvaluators
-                                                        evaluationId={evaluation.id}
-                                                        onSuccess={fetchEvaluations}
-                                                        trigger={<Button className="w-full sm:w-auto">Manage Evaluators</Button>}
-                                                    />
-                                                    <EvaluationDelete
-                                                        evaluationId={evaluation.id}
-                                                        onSuccess={fetchEvaluations}
-                                                        trigger={<Button variant="destructive" className="w-full sm:w-auto">Delete</Button>}
-                                                    />
-                                                </div>
-                                            </CardFooter>
+                                                <CardFooter>
+                                                    <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+                                                        <ButtonGroup className="w-full sm:w-auto ">
+                                                            <CriteriaAdd
+                                                                evaluationId={evaluation.id}
+                                                                trigger={<Button className="w-full sm:w-auto"><SquareChartGantt className="-ml-1 mr-2 h-4 w-4" />Manage Criteria</Button>}
+                                                            />
+                                                            <ButtonGroupSeparator />
+                                                            <ManageEvaluators
+                                                                evaluationId={evaluation.id}
+                                                                onSuccess={fetchEvaluations}
+                                                                trigger={<Button className="w-full sm:w-auto"><Users className="-ml-1 mr-2 h-4 w-4" />Manage Evaluators</Button>}
+                                                            />
+                                                            <ButtonGroupSeparator />
+                                                            <EvaluationDelete
+                                                                evaluationId={evaluation.id}
+                                                                onSuccess={fetchEvaluations}
+                                                                trigger={<Button variant="destructive" className="w-full sm:w-auto"><Trash2 className="-ml-1 mr-2 h-4 w-4" />Delete</Button>}
+                                                            />
+                                                        </ButtonGroup>
+                                                    </div>
+                                                </CardFooter>
                                         </Card>
                                     ))}
                                 </div>
