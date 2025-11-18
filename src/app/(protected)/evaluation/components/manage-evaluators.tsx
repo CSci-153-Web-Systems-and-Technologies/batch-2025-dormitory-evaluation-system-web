@@ -62,7 +62,7 @@ export function ManageEvaluators({evaluationId, trigger}: { evaluationId?: strin
     if (!email) continue;
 
     try {
-        const response = await fetch("/api/resend/send", {
+        const response = await fetch("/api/send-email", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
