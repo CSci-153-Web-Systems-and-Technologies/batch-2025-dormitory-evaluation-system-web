@@ -34,7 +34,7 @@ export function SignupForm({
     toast.error("Passwords do not match");
     return;
   }
-    let { error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
     email: email,
     password: password
   })

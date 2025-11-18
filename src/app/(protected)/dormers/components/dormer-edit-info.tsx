@@ -49,14 +49,14 @@ export function DormerEditInfo({ onSuccess, dormer, open, onOpenChange }: { onSu
                 <DialogHeader>
                     <DialogTitle>Edit Dormer Information</DialogTitle>
                     <DialogDescription>
-                        Make changes to the dormer's information below. Click save when you're done.
+                        Make changes to the dormer&apos;s information below. Click save when you&apos;re done.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-6">
                     <Field>
                         <FieldLabel>
                             <FieldTitle>First Name</FieldTitle>
-                            <FieldDescription>The dormer's first name.</FieldDescription>
+                            <FieldDescription>The dormer&apos;s first name.</FieldDescription>
                         </FieldLabel>
                         <FieldContent>
                             <Input placeholder="First Name" {...register("first_name", { required: "First name is required" })} />
@@ -67,7 +67,7 @@ export function DormerEditInfo({ onSuccess, dormer, open, onOpenChange }: { onSu
                     <Field>
                         <FieldLabel>
                             <FieldTitle>Last Name</FieldTitle>
-                            <FieldDescription>The dormer's last name.</FieldDescription>
+                            <FieldDescription>The dormer&apos;s last name.</FieldDescription>
                         </FieldLabel>
                         <FieldContent>
                             <Input placeholder="Last Name" {...register("last_name", { required: "Last name is required" })} />
@@ -78,7 +78,7 @@ export function DormerEditInfo({ onSuccess, dormer, open, onOpenChange }: { onSu
                     <Field>
                         <FieldLabel>
                             <FieldTitle>Email</FieldTitle>
-                            <FieldDescription>The dormer's email address.</FieldDescription>
+                            <FieldDescription>The dormer&apos;`s email address.</FieldDescription>
                         </FieldLabel>
                         <FieldContent>
                             <Input type="email" placeholder="Email" {...register("email", { required: "Email is required" })} />
@@ -89,7 +89,7 @@ export function DormerEditInfo({ onSuccess, dormer, open, onOpenChange }: { onSu
                     <Field>
                         <FieldLabel>
                             <FieldTitle>Room</FieldTitle>
-                            <FieldDescription>The dormer's room number.</FieldDescription>
+                            <FieldDescription>The dormer&apos;s room number.</FieldDescription>
                         </FieldLabel>
                         <FieldContent>
                             <Input placeholder="Room" {...register("room", { required: "Room is required" })} />
@@ -100,7 +100,7 @@ export function DormerEditInfo({ onSuccess, dormer, open, onOpenChange }: { onSu
                     <Field>
                         <FieldLabel>
                             <FieldTitle>Course & Year Level</FieldTitle>
-                            <FieldDescription>The dormer's course and year level.</FieldDescription>
+                            <FieldDescription>The dormer&apos;s course and year level.</FieldDescription>
                         </FieldLabel>
                         <FieldContent>
                             <Input placeholder="Course & Year Level" {...register("course_year", { required: "Course & Year Level is required" })} />

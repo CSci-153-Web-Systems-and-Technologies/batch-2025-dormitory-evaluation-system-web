@@ -95,7 +95,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         if (!pc) return;
         setEditingId(pc.id);
         setEditWeights(prev => ({ ...prev, [pc.id]: String(pc.weight) }));
-        setEditMaxScores(prev => ({ ...prev, [pc.id]: String((pc as any).max_score ?? "") }));
+        setEditMaxScores(prev => ({ ...prev, [pc.id]: String((pc as PeriodCriteria).max_score ?? "") }));
     }, [periodCriteria]);
 
     const cancelEdit = React.useCallback((pcId: string) => {
@@ -116,7 +116,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         if (weight > allowed) { toast.error("Weight cannot exceed remaining percentage"); return; }
         if (maxScore !== null && (isNaN(maxScore) || maxScore < 1)) { toast.error("Please enter a valid max score (>= 1)"); return; }
         setEditLoading(true);
-        const updates: any = { weight };
+        const updates: Partial<PeriodCriteria> = { weight };
         if (maxScore !== null) updates.max_score = maxScore;
         const { error, data } = await supabase.from("period_criteria").update(updates).eq("id", pc.id).select().single();
         if (error) {
@@ -212,7 +212,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
             }
         };
         fetchCurrentTotalWeight();
-    }, [evaluationId]);
+    }, [evaluationId, supabase]);
 
     React.useEffect(() => {
         const fetchCriteria = async () => {
@@ -225,7 +225,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
             }
         };
         fetchCriteria();
-    }, [evaluationId]);
+    }, [evaluationId, supabase]);
 
     React.useEffect(() => {
         const fetchPeriodCriteria = async () => {
@@ -241,9 +241,9 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
             }
         };
         fetchPeriodCriteria();
-    }, [evaluationId]);
+    }, [evaluationId, supabase]);
 
-    const handleAddCriteria = async (criterionId: string, weight: number, max_score: number) => {
+    const handleAddCriteria = React.useCallback(async (criterionId: string, weight: number, max_score: number) => {
         const { data, error } = await supabase
             .from("period_criteria")
             .insert([{ evaluation_period_id: evaluationId, criterion_id: criterionId, weight, max_score }])
@@ -259,7 +259,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
             setInputMaxScores(prev => { const copy = { ...prev }; delete copy[criterionId]; return copy; });
             toast.success("Criteria added successfully");
         }
-    };
+    }, [supabase, evaluationId]);
 
     const getRemaining = React.useCallback(() => Math.max(0, 100 - currentWeight), [currentWeight]);
 
@@ -270,7 +270,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         return Math.max(0, remaining - otherTyped);
     }
 
-    const handleWeightChange = (critId: string, raw: string) => {
+    const handleWeightChange = React.useCallback((critId: string, raw: string) => {
         if (raw === "") { setInputWeights(prev => ({ ...prev, [critId]: "" })); return; }
         let n = parseInt(raw, 10);
         if (isNaN(n)) return;
@@ -278,13 +278,13 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         if (n > remaining) n = remaining;
         if (n < 0) n = 0;
         setInputWeights(prev => ({ ...prev, [critId]: String(n) }));
-    }
+    }, [getRemaining]);
 
-    const handleMaxScoreChange = (critId: string, raw: string) => {
+    const handleMaxScoreChange = React.useCallback((critId: string, raw: string) => {
         setInputMaxScores(prev => ({ ...prev, [critId]: raw }));
-    }
+    }, []);
 
-    const handleAddClick = async (critId: string) => {
+    const handleAddClick = React.useCallback(async (critId: string) => {
         const weight = parseInt(inputWeights[critId] || "", 10);
         const maxScore = parseInt(inputMaxScores[critId] || "", 10);
         const remaining = getRemaining();
@@ -292,7 +292,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         if (weight > remaining) { toast.error("Weight cannot exceed remaining percentage"); return; }
         if (isNaN(maxScore) || maxScore < 1) { toast.error("Please enter a valid max score (>= 1)"); return; }
         await handleAddCriteria(critId, weight, maxScore);
-    };
+    }, [getRemaining, handleAddCriteria, inputWeights, inputMaxScores]);
     const addHandlers = React.useMemo(() => {
         const m: Record<string, () => void> = {};
         criteria.forEach(c => { m[c.id] = () => handleAddClick(c.id); });
@@ -382,7 +382,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
                                                                             <Input
                                                                                 type="number"
                                                                                 min={1}
-                                                                                value={editMaxScores[pc.id] ?? String((pc as any).max_score ?? "")}
+                                                                                value={editMaxScores[pc.id] ?? String((pc as PeriodCriteria).max_score ?? "")}
                                                                                 onChange={editMaxHandlers[pc.id]}
                                                                                 className="w-28"
                                                                             />

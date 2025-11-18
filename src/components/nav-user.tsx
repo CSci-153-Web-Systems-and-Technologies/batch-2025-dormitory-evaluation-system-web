@@ -44,7 +44,7 @@ export function NavUser({
 
   const handleLogout = async (e: React.FormEvent) => {
     e.preventDefault();
-    let { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
     if (error) {
       toast.error("Logout failed: " + error.message);
     } else {

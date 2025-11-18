@@ -4,7 +4,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog"
 import {
     AlertDialog,
@@ -18,7 +17,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -37,7 +35,7 @@ import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-export function ManageEvaluators({evaluationId, trigger, onSuccess}: { evaluationId?: string | number, trigger?: React.ReactNode, onSuccess?: () => void }) {
+export function ManageEvaluators({evaluationId, trigger}: { evaluationId?: string | number, trigger?: React.ReactNode, onSuccess?: () => void }) {
     const supabase = React.useMemo(() => createClient(), [])
     const [open, setOpen] = React.useState(false)
     const [evaluatorsIDs, setEvaluatorsIDs] = React.useState<PeriodEvaluators[]>([])
@@ -50,6 +48,45 @@ export function ManageEvaluators({evaluationId, trigger, onSuccess}: { evaluatio
     const [selectedRoomAdd, setSelectedRoomAdd] = React.useState<string>("all")
     const [toAddIds, setToAddIds] = React.useState<string[]>([])
     const [isAdding, setIsAdding] = React.useState(false)
+
+    const handleSendInvites = async () => {
+
+  if (evaluatorsIDs.length === 0) {
+    toast.error("No evaluators to send invites to.");
+    return;
+  }
+
+  for (const evaluator of evaluatorsIDs) {
+    const email = dormers.find((d) => d.id === evaluator.dormer_id)?.email;
+    const routerLink = `${window.location.origin}/evaluator/${evaluator.id}`;
+    if (!email) continue;
+
+    try {
+        const response = await fetch("/api/resend/send", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                to: email,
+                subject: "Evaluator Invitation",
+                html: `<p>You have been invited to be an evaluator. Please click the link below to access your evaluator dashboard:</p>
+                       <a href="${routerLink}">${routerLink}</a>`,
+            }),
+        }); 
+        const data = await response.json();
+        if (response.ok) {
+            toast.success(`Invitation sent to ${email}`);
+        } else {
+            console.error("Error sending email:", data);
+            toast.error(`Failed to send invitation to ${email}`);
+        }
+    } catch (error) {
+        console.error("Error sending email:", error);
+        toast.error(`Failed to send invitation to ${email}`);
+    }
+  }
+};
 
     const fetchEvaluatorsIDs = React.useCallback(async () => {
         const{data, error} = await createClient()
@@ -203,6 +240,7 @@ export function ManageEvaluators({evaluationId, trigger, onSuccess}: { evaluatio
                     <TabsContent value="evaluators">
                         <div className="space-y-4">
                         <div className="flex justify-end gap-2 mb-4">
+                            <Button onClick={handleSendInvites}>Send Invites</Button>
                             <Button variant="ghost" onClick={() => {
                                 const visibleIds = dormers.map(d => d.id)
                                 setSelectedEvaluators(prev => Array.from(new Set([...prev, ...visibleIds])))
