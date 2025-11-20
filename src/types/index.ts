@@ -22,6 +22,7 @@ export type PeriodEvaluators = {
     id: string;
     evaluation_period_id: string;
     dormer_id: string;
+    evaluator_status: 'pending' | 'completed';
 }
 export type Criteria = {
     id: string;

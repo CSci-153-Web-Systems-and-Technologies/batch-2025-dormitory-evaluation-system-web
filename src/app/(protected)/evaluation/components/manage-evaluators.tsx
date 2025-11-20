@@ -34,6 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 
 export function ManageEvaluators({evaluationId, trigger}: { evaluationId?: string | number, trigger?: React.ReactNode, onSuccess?: () => void }) {
     const supabase = React.useMemo(() => createClient(), [])
@@ -48,6 +49,32 @@ export function ManageEvaluators({evaluationId, trigger}: { evaluationId?: strin
     const [selectedRoomAdd, setSelectedRoomAdd] = React.useState<string>("all")
     const [toAddIds, setToAddIds] = React.useState<string[]>([])
     const [isAdding, setIsAdding] = React.useState(false)
+    const [evaluatorsStatus, setEvaluatorsStatus] = React.useState<string[]>([])
+
+    React.useEffect(() => {
+        const fetchEvaluatorsStatus = async () => {
+            if (evaluatorsIDs.length === 0) {
+                setEvaluatorsStatus([])
+                return
+            }
+            const statuses: string[] = []
+            for (const evaluator of evaluatorsIDs) {
+                const { data, error } = await createClient()    
+                    .from("period_evaluators")
+                    .select("evaluator_status")
+                    .eq("id", evaluator.id)
+                if (error) {
+                    console.error("Error fetching evaluator status:", error)
+                    statuses.push("Unknown")
+                }
+                else {
+                    statuses.push(data && data.length > 0 ? data[0].evaluator_status : "Unknown")
+                }
+            }
+            setEvaluatorsStatus(statuses)
+        }
+        fetchEvaluatorsStatus()
+    }, [evaluatorsIDs])
 
     const handleSendInvites = async () => {
 
@@ -251,9 +278,6 @@ export function ManageEvaluators({evaluationId, trigger}: { evaluationId?: strin
                         {dormers.length === 0 ? (
                             <Empty>
                                 <EmptyHeader>
-                                    <EmptyMedia>
-                                        <Car className="h-12 w-12 text-muted-foreground" />
-                                    </EmptyMedia>
                                     <EmptyTitle>No Evaluators Found</EmptyTitle>
                                     <EmptyDescription>
                                         No evaluators have been assigned to this evaluation period.
@@ -264,20 +288,30 @@ export function ManageEvaluators({evaluationId, trigger}: { evaluationId?: strin
                             <ScrollArea className="h-60 rounded-md border border-transparent">
                                 <div className="space-y-4 p-1">
                                     <div className="flex flex-col gap-2 items-center">
-                                    {dormers.map((dormer) => (
-                                        <Card key={dormer.id} className={`w-full ${selectedEvaluators.includes(dormer.id) ? 'ring-2 ring-destructive/50' : ''}`}>
-                                            <CardContent className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-lg font-medium">{dormer.first_name} {dormer.last_name}</p>
-                                                    <p className="text-sm text-muted-foreground">{dormer.email} · <span className="text-muted-foreground">Room {dormer.room}</span></p>
-                                                </div>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <Input type="checkbox" className="w-5 h-5" checked={selectedEvaluators.includes(dormer.id)} onChange={() => handleEvaluatorSelect(dormer.id)} />
-                                                    <span className="sr-only">Select evaluator</span>
-                                                </label>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
+                                    {dormers.map((dormer) => {
+                                        const idx = evaluatorsIDs.findIndex(e => e.dormer_id === dormer.id)
+                                        const status = idx !== -1 ? evaluatorsStatus[idx] : "Unknown"
+                                        return (
+                                            <Card key={dormer.id} className={`w-full ${selectedEvaluators.includes(dormer.id) ? 'ring-2 ring-destructive/50' : ''}`}>
+                                                <CardContent className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-lg font-medium">{dormer.first_name} {dormer.last_name}</p>
+                                                        <p className="text-sm text-muted-foreground">{dormer.email} · <span className="text-muted-foreground">Room {dormer.room}</span></p>
+                                                        {status === 'pending' && (
+                                                            <Badge className="mt-1 bg-yellow-100 text-yellow-800">Pending</Badge>
+                                                        )}
+                                                        {status === 'completed' && (
+                                                            <Badge className="mt-1 bg-primary">Completed</Badge>
+                                                        )}
+                                                    </div>
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <Input type="checkbox" className="w-5 h-5" checked={selectedEvaluators.includes(dormer.id)} onChange={() => handleEvaluatorSelect(dormer.id)} />
+                                                        <span className="sr-only">Select evaluator</span>
+                                                    </label>
+                                                </CardContent>
+                                            </Card>
+                                        )
+                                    })}
                                     </div>
                                 </div>
                             </ScrollArea>
@@ -344,20 +378,32 @@ export function ManageEvaluators({evaluationId, trigger}: { evaluationId?: strin
                             ) : (
                                 <ScrollArea className="h-60 rounded-md border border-transparent">
                                     <div className="space-y-2 p-1">
-                                        {filteredAllDormers.map(d => (
-                                            <Card key={d.id} className={`mb-2 ${toAddIds.includes(d.id) ? 'ring-2 ring-primary/60' : ''}`}>
-                                                <CardContent className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">{d.first_name} {d.last_name}</p>
-                                                        <p className="text-sm text-muted-foreground">{d.email} · <span className="text-muted-foreground">Room {d.room}</span></p>
-                                                    </div>
-                                                    <label className="flex items-center gap-2 cursor-pointer">
-                                                        <input type="checkbox" checked={toAddIds.includes(d.id)} onChange={() => toggleToAdd(d.id)} className="w-5 h-5" />
-                                                        <span className="sr-only">Select to add</span>
-                                                    </label>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
+                                        {filteredAllDormers.map(d => {
+                                            const isAssigned = assignedIds.has(d.id)
+                                            const isSelected = toAddIds.includes(d.id)
+                                            return (
+                                                <Card key={d.id} className={`mb-2 ${isAssigned ? 'opacity-60 cursor-not-allowed' : ''} ${!isAssigned && isSelected ? 'ring-2 ring-primary/60' : ''}`}>
+                                                    <CardContent className="flex items-center justify-between">
+                                                        <div>
+                                                            <p className="font-medium">{d.first_name} {d.last_name}</p>
+                                                            <p className="text-sm text-muted-foreground">{d.email} · <span className="text-muted-foreground">Room {d.room}</span></p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isAssigned ? true : isSelected}
+                                                                    disabled={isAssigned}
+                                                                    onChange={() => { if (!isAssigned) toggleToAdd(d.id) }}
+                                                                    className="w-5 h-5"
+                                                                />
+                                                                <span className="sr-only">Select to add</span>
+                                                            </label>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            )
+                                        })}
                                     </div>
                                 </ScrollArea>
                             )}
