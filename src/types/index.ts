@@ -36,4 +36,8 @@ export type PeriodCriteria = {
     criterion_id: string;
     weight: number;
     max_score: number;
+
+    name: string
+    description: string
+    type: "subjective" | "objective"
 }
