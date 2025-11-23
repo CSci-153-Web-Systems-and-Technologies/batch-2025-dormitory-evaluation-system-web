@@ -36,8 +36,16 @@ export type PeriodCriteria = {
     criterion_id: string;
     weight: number;
     max_score: number;
-
-    name: string
-    description: string
-    type: "subjective" | "objective"
 }
+export type SubjectiveScores = {
+    id: string;
+    period_criteria_id: string;
+    period_evaluator_id: string;
+    target_dormer_id: string;
+    score: number;
+    evaluation_period_id: string;
+}
+
+ export type ExtendedPeriodCriteria = PeriodCriteria & {
+  criteria: Criteria; 
+};
