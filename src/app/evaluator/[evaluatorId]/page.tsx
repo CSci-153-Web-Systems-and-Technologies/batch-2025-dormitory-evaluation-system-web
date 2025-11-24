@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react"
 import { useParams} from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { Criteria, Dormer, PeriodCriteria, SubjectiveScores } from "@/types"
+import { Dormer, ExtendedPeriodCriteria} from "@/types"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,8 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ExtendedPeriodCriteria } from "@/types"
 import { Spinner } from "@/components/ui/spinner"
+import { EvaluationEdit } from "../components/evaluation-edit"
 
 export default function EvaluatorPage() {
   const supabase = createClient()
@@ -207,7 +207,7 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
     }
 
     const scoresToInsert = extendedCriteria.map((item) => ({
-      period_criteria_id: item.criteria.id,
+      period_criteria_id: item.id,
       period_evaluator_id: periodEvaluatorId,
       target_dormer_id: selectedDormer.id,
       evaluation_period_id: evaluationPeriodId,
@@ -269,7 +269,13 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
                             <div className="font-medium">{d.first_name} {d.last_name}</div>
                             <div className="text-sm">Room: {d.room} </div>
                           </div>
-                          <div>
+                          <div className="flex items-center gap-2">
+                            <EvaluationEdit
+                              targetDormerId={d.id}
+                              evaluatorId={periodEvaluatorId ?? ""}
+                              evaluationPeriodId={evaluationPeriodId ?? ""}
+                              trigger={<Button>Edit</Button>}
+                            />
                             <Button
                               size="sm"
                               onClick={() => {
