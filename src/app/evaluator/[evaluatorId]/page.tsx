@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, useMemo } from "react"
-import { useParams} from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Dormer, ExtendedPeriodCriteria} from "@/types"
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { MoreHorizontal, Check, Edit, NotebookText} from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { EvaluationEdit } from "../components/evaluation-edit"
 
@@ -24,6 +44,7 @@ export default function EvaluatorPage() {
   const params = useParams() as { evaluatorId?: string }
   const periodEvaluatorId = params?.evaluatorId ?? null
   const [evaluationPeriodId, setEvaluationPeriodId] = useState<string | null>(null)
+  const [evaluatorDormerId, setEvaluatorDormerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [dormers, setDormers] = useState<Dormer[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -33,6 +54,11 @@ export default function EvaluatorPage() {
   const [scores, setScores] = useState<Record<string, number | "">>({})
   const [isLoading, setIsLoading] = useState(false)
   const [evaluatedDormers, setEvaluatedDormers] = useState<string[]>([])
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editTargetDormerId, setEditTargetDormerId] = useState<string | null>(null)
+  const [exitDialogOpen, setExitDialogOpen] = useState(false)
+  const [isExiting, setIsExiting] = useState(false)
+  const router = useRouter()
 
 const handleScoreChange = (criteriaId: string, value: string | number) => {
     const pc = extendedCriteria.find((ec) => ec.id === criteriaId)
@@ -155,7 +181,7 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
       setLoading(true)
       const { data, error } = await supabase
         .from("period_evaluators")
-        .select("evaluation_period_id")
+        .select("evaluation_period_id, dormer_id")
         .eq("id", periodEvaluatorId)
         .single()
       if (error) {
@@ -164,6 +190,7 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
         return
       }
       setEvaluationPeriodId(data.evaluation_period_id)
+      setEvaluatorDormerId(data.dormer_id ?? null)
     } finally {
       setLoading(false)
     }
@@ -233,60 +260,113 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
     }
   }
 
-  return (
-    <div className="max-w-xl mx-auto mt-10 space-y-4">
-      <h1 className="text-2xl font-bold">Evaluator Page</h1>
-      <p><strong>Period Evaluator ID:</strong> {periodEvaluatorId ?? "Not available"}</p>
-      <p>
-        <strong>Evaluation Period ID:</strong>{" "}
-        {loading ? "Loading..." : evaluationPeriodId ?? "Not available"}
-      </p>
+  const handleExit = async () => {
+    if (!periodEvaluatorId) {
+      toast.error("Evaluator session not available.")
+      return
+    }
 
-      <div className="p-4 border rounded-md">
-        <div className="flex flex-row m-4">
+    const pending = dormers.filter((d) => d.id !== evaluatorDormerId && !evaluatedDormers.includes(d.id))
+    if (pending.length > 0) {
+      toast.error(`You must evaluate ${pending.length} more dormer(s) before exiting.`)
+      return
+    }
+
+    setIsExiting(true)
+    try {
+      const { data, error } = await supabase
+        .from("period_evaluators")
+        .update({ evaluator_status: 'completed' })
+        .eq("id", periodEvaluatorId)
+
+      if (error) throw error
+
+      toast.success("Exit confirmed. You will be redirected.")
+      router.push("/")
+    } catch (error) {
+      toast.error("Failed to update status.")
+      console.error("Error updating status:", error)
+    } finally {
+      setIsExiting(false)
+    }
+  }
+
+  return (
+    <div className="p-4 sm:p-8 lg:p-10 w-full space-y-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                          <h1 className="text-2xl md:text-3xl font-bold text-primary">Dormitory Evaluation System</h1>
+                          <p className="text-sm text-muted-foreground">Evaluator ID: {periodEvaluatorId ?? "Not available"}</p>
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setExitDialogOpen(true)}>
+                          Log-out
+                        </Button>
+                      </div>
+                  </div>
+      <div className="border rounded-md">
+        <div className="flex flex-col sm:flex-row items-center m-4">
           <Input
             type="text"
             placeholder="Search dormers to evaluate..."
-            className="m-2"
+            className="m-2 flex-1 text-sm sm:text-base"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)
             }
           />
         </div>
         <div className="m-4">
-          <ScrollArea className="h-64">
+          <ScrollArea className="h-[60vh] sm:h-[500px]">
             {filteredDormers.length === 0 ? (
               <p className="text-sm text-muted-foreground p-2">No dormers found.</p>
             ) : (
               <div className="space-y-2">
                 {filteredDormers.map((d) => {
                   const alreadyEvaluated = evaluatedDormers.includes(d.id)
+                  const isSelf = evaluatorDormerId === d.id
                   return (
-                    <Card key={d.id} className="p-2">
+                    <Card key={d.id} className="p-1 sm:p-6">
                       <CardContent>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{d.first_name} {d.last_name}</div>
-                            <div className="text-sm">Room: {d.room} </div>
+                        <div className="flex flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {alreadyEvaluated && <Check className="h-4 w-4 text-primary" />}
+                            <div className="font-medium truncate text-xs sm:text-base">{d.first_name} {d.last_name}</div>
+                            <div className="text-xs sm:text-sm text-muted-foreground ml-2">Room: {d.room}</div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <EvaluationEdit
-                              targetDormerId={d.id}
-                              evaluatorId={periodEvaluatorId ?? ""}
-                              evaluationPeriodId={evaluationPeriodId ?? ""}
-                              trigger={<Button>Edit</Button>}
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                if (alreadyEvaluated) return
-                                setSelectedDormer(d)
-                                setDialogOpen(true)
-                              }}
-                              disabled={alreadyEvaluated}
-                            >
-                              {alreadyEvaluated ? "Evaluated" : "Evaluate"}
-                            </Button>
+                          <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    if (alreadyEvaluated || isSelf) return
+                                    setSelectedDormer(d)
+                                    setDialogOpen(true)
+                                  }}
+                                  disabled={alreadyEvaluated || isSelf}
+                                >
+                                  <NotebookText className="ml-2 h-4 w-4 text-primary" />
+                                  {isSelf ? "Cannot evaluate yourself" : (alreadyEvaluated ? "Already evaluated" : "Evaluate")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setEditTargetDormerId(d.id)
+                                    setEditDialogOpen(true)
+                                  }}
+                                  disabled={isSelf}
+                                >
+                                  <Edit className="ml-2 h-4 w-4 text-primary" />
+                                  Edit
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                       </CardContent>
@@ -304,26 +384,26 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
                   {selectedDormer && (` - Room: ${selectedDormer.room}`)}
                 </DialogTitle>
               </DialogHeader>
-                  <ScrollArea className="h-96">
+                  <ScrollArea className="max-h-[70vh]">
                 {selectedDormer ? (
                     <div className="space-y-4">
                       {extendedCriteria.map((pc) => (
                         <Card key={pc.id}>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-base font-medium flex justify-between">
+                            <CardTitle className="text-sm sm:text-base font-medium flex justify-between">
                               <span>{pc.criteria.name}</span>
                               <span className="text-xs text-muted-foreground font-normal">
                                 Max: {pc.max_score}
                               </span>
                             </CardTitle>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               {pc.criteria.description}
                             </p>
                           </CardHeader>
 
                           <CardContent>
-                            <div className="flex items-center gap-4">
-                              <label className="text-sm font-medium">Score:</label>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                              <label className="text-xs sm:text-sm font-medium">Score:</label>
                               <Input
                                 type="number"
                                 min={0}
@@ -331,7 +411,6 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
                                 placeholder={"Enter Score"}
                                 value={scores[pc.id] || ""}
                                 onChange={(e) => handleScoreChange(pc.id, e.target.value)}
-                                className="max-w-[150px]"
                                 required
                               />
                             </div>
@@ -352,6 +431,32 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
                 </DialogFooter>
             </DialogContent>
           </Dialog>
+          <EvaluationEdit
+            evaluatorId={periodEvaluatorId ?? ""}
+            targetDormerId={editTargetDormerId ?? ""}
+            evaluationPeriodId={evaluationPeriodId ?? ""}
+            open={editDialogOpen}
+            onOpenChangeAction={(o) => {
+              if (!o) setEditTargetDormerId(null)
+              setEditDialogOpen(o)
+            }}
+          />
+          <AlertDialog open={exitDialogOpen} onOpenChange={(open) => setExitDialogOpen(open)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to exit?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You have evaluated all assigned dormers. Confirming exit will finalize your evaluations and log you out.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setExitDialogOpen(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleExit} disabled={isExiting} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+                  {isExiting ? "Exiting..." : "Confirm Exit"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>

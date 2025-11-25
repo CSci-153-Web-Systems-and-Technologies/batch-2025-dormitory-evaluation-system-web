@@ -18,7 +18,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 
-export function EvaluationEdit({trigger, evaluatorId, targetDormerId, evaluationPeriodId, onSuccessAction}: {trigger: React.ReactNode, evaluatorId: string, targetDormerId: string, evaluationPeriodId: string, onSuccessAction?: () => void}) {
+export function EvaluationEdit({
+    trigger,
+    evaluatorId,
+    targetDormerId,
+    evaluationPeriodId,
+    onSuccessAction,
+    open,
+    onOpenChangeAction,
+}: {
+    trigger?: React.ReactNode
+    evaluatorId: string
+    targetDormerId: string
+    evaluationPeriodId: string
+    onSuccessAction?: () => void
+    open?: boolean
+    onOpenChangeAction?: (open: boolean) => void
+}) {
     const supabase = createClient()
     const [isLoading, setIsLoading] = useState(false)
     const[scores, setScores] = useState<SubjectiveScores[]>([])
@@ -27,6 +43,7 @@ export function EvaluationEdit({trigger, evaluatorId, targetDormerId, evaluation
     const [periodCriteria, setPeriodCriteria] = useState<ExtendedPeriodCriteria[]>([])
     useEffect(() => {
         const fetchPeriodCriteria = async () => {
+            if (!evaluationPeriodId) return
             try {
                 const { data, error } = await supabase
                     .from("period_criteria")
@@ -52,6 +69,7 @@ export function EvaluationEdit({trigger, evaluatorId, targetDormerId, evaluation
 
     useEffect(() => {
         const fetchDormer = async () => {
+            if (!targetDormerId) return
             try {
                 const { data, error } = await supabase
                     .from("dormers")
@@ -71,6 +89,7 @@ export function EvaluationEdit({trigger, evaluatorId, targetDormerId, evaluation
     }, [targetDormerId])
     useEffect(() => {
         const fetchScores = async () => {
+            if (!targetDormerId || !evaluationPeriodId) return
             try {
                 const { data, error } = await supabase
                     .from("subjective_scores")
@@ -156,14 +175,16 @@ export function EvaluationEdit({trigger, evaluatorId, targetDormerId, evaluation
         }))
     }
 
+    const isControlled = typeof open === "boolean"
+
     return (
-        <Dialog>
-            <DialogTrigger asChild>{trigger}</DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChangeAction}>
+            {!isControlled && trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle className="text-primary">Edit Evaluation for {dormer && `${dormer.first_name} ${dormer.last_name}`}</DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="h-96">
+                <ScrollArea className="max-h-[70vh]">
                                         {dormer ? (
                                                 <div className="space-y-4 p-4">
                                                         {periodCriteria.map((pc) => (
@@ -181,7 +202,7 @@ export function EvaluationEdit({trigger, evaluatorId, targetDormerId, evaluation
                                                     </CardHeader>
 
                                                     <CardContent>
-                                                        <div className="flex items-center gap-4">
+                                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                                             <label className="text-sm font-medium">Score:</label>
                                                                 <Input
                                                                 key={pc.id}
@@ -190,6 +211,7 @@ export function EvaluationEdit({trigger, evaluatorId, targetDormerId, evaluation
                                                                 onChange={(e) => handleScoreChange(String(pc.id), e.target.value)}
                                                                 min={0}
                                                                 max={pc.max_score}
+                                                                className="w-full sm:max-w-[200px]"
                                                                 />
                                                         </div>
                                                     </CardContent>
