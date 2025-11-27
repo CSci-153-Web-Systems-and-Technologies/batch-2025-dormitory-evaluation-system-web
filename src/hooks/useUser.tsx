@@ -23,7 +23,7 @@ export default function useUser() {
       mounted = false;
       listener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   return user;
 }

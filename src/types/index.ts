@@ -22,6 +22,7 @@ export type PeriodEvaluators = {
     id: string;
     evaluation_period_id: string;
     dormer_id: string;
+    evaluator_status: 'pending' | 'completed';
 }
 export type Criteria = {
     id: string;
@@ -36,3 +37,15 @@ export type PeriodCriteria = {
     weight: number;
     max_score: number;
 }
+export type SubjectiveScores = {
+    id: string;
+    period_criteria_id: string;
+    period_evaluator_id: string;
+    target_dormer_id: string;
+    score: number;
+    evaluation_period_id: string;
+}
+
+ export type ExtendedPeriodCriteria = PeriodCriteria & {
+  criteria: Criteria; 
+};

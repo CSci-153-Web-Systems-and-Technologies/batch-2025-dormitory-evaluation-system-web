@@ -26,7 +26,6 @@ import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client";
 import { Criteria} from "@/types";
 import { toast } from "sonner";
-import { set } from "react-hook-form"
 
 export default function CriterionAdd({ onOpenChange, open, trigger, onAdded }: { onOpenChange?: (open: boolean) => void, open?: boolean, trigger?: React.ReactNode, onAdded?: (c: Criteria) => void }) {
     const supabase = createClient();
@@ -55,12 +54,12 @@ export default function CriterionAdd({ onOpenChange, open, trigger, onAdded }: {
             toast.error("Failed to add criterion");
         } else {
             const added = data as Criteria;
-            onAdded && onAdded(added);
+            if (onAdded) onAdded(added);
             setName("");
             setDescription("");
             setType('objective');
-            onOpenChange && onOpenChange(false);
-            toast.success("Criterion added successfully");
+            if (onOpenChange) onOpenChange(false);
+            void toast.success("Criterion added successfully");
         }
     }
     return (

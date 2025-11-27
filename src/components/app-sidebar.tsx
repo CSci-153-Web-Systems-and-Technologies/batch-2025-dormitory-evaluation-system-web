@@ -18,6 +18,7 @@ import {
 import { NavUser } from "@/components/nav-user"
 import useUser from "@/hooks/useUser"
 import { GalleryVerticalEnd } from "lucide-react"
+import { User } from "@supabase/supabase-js"
 
 // Menu items.
 const items = [
@@ -33,9 +34,9 @@ export function AppSidebar() {
 
   const navUser = {
     name:
-      (user as any)?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "Guest",
+      (user as User)?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "Guest",
     email: user?.email ?? "",
-    avatar: (user as any)?.user_metadata?.avatar_url ?? "",
+    avatar: (user as User)?.user_metadata?.avatar_url ?? "",
   }
 
   return (
