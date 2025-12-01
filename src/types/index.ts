@@ -45,7 +45,14 @@ export type SubjectiveScores = {
     score: number;
     evaluation_period_id: string;
 }
+export type ObjectiveScores = {
+    id: string;
+    period_criteria_id: string;
+    target_dormer_id: string;
+    score: number;
+    evaluation_period_id: string;
+}
 
- export type ExtendedPeriodCriteria = PeriodCriteria & {
-  criteria: Criteria; 
+export type ExtendedPeriodCriteria = PeriodCriteria & {
+    criteria: Criteria;
 };
