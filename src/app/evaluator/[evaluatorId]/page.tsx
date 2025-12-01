@@ -4,12 +4,12 @@ import { useEffect, useState, useCallback, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { Dormer, ExtendedPeriodCriteria} from "@/types"
+import { Dormer, ExtendedPeriodCriteria } from "@/types"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Check, Edit, NotebookText} from "lucide-react"
+import { MoreHorizontal, Check, Edit, NotebookText } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -60,7 +60,7 @@ export default function EvaluatorPage() {
   const [isExiting, setIsExiting] = useState(false)
   const router = useRouter()
 
-const handleScoreChange = (criteriaId: string, value: string | number) => {
+  const handleScoreChange = (criteriaId: string, value: string | number) => {
     const pc = extendedCriteria.find((ec) => ec.id === criteriaId)
     const max = pc?.max_score
 
@@ -103,32 +103,32 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
   }, [dormers, searchQuery])
 
   useEffect(() => {
-  const fetchSubjectiveCriteria = async () => {
-    if (!evaluationPeriodId) return
-    
-    try {
-      const { data, error } = await supabase
-        .from("period_criteria")
-        .select(`
+    const fetchSubjectiveCriteria = async () => {
+      if (!evaluationPeriodId) return
+
+      try {
+        const { data, error } = await supabase
+          .from("period_criteria")
+          .select(`
           *,
           criteria!inner (
             id, name, description, type
           )
         `)
-        .eq("evaluation_period_id", evaluationPeriodId)
-        .eq("criteria.type", "subjective") 
-      
-      if (error) throw error
-      
-      setExtendedCriteria((data as unknown) as ExtendedPeriodCriteria[])
-    } catch (error) {
-      toast.error("Failed to fetch criteria.")
-      console.error(error)
-    }
-  }
+          .eq("evaluation_period_id", evaluationPeriodId)
+          .eq("criteria.type", "subjective")
 
-  fetchSubjectiveCriteria()
-}, [evaluationPeriodId, supabase])
+        if (error) throw error
+
+        setExtendedCriteria((data as unknown) as ExtendedPeriodCriteria[])
+      } catch (error) {
+        toast.error("Failed to fetch criteria.")
+        console.error(error)
+      }
+    }
+
+    fetchSubjectiveCriteria()
+  }, [evaluationPeriodId, supabase])
 
   useEffect(() => {
     const fetchEvaluatedDormers = async () => {
@@ -293,17 +293,17 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
 
   return (
     <div className="p-4 sm:p-8 lg:p-10 w-full space-y-8">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div>
-                          <h1 className="text-2xl md:text-3xl font-bold text-primary">Dormitory Evaluation System</h1>
-                          <p className="text-sm text-muted-foreground">Evaluator ID: {periodEvaluatorId ?? "Not available"}</p>
-                      </div>
-                      <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => setExitDialogOpen(true)}>
-                          Log-out
-                        </Button>
-                      </div>
-                  </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary">Dormitory Evaluation System</h1>
+          <p className="text-sm text-muted-foreground">Evaluator ID: {periodEvaluatorId ?? "Not available"}</p>
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setExitDialogOpen(true)}>
+            Log-out
+          </Button>
+        </div>
+      </div>
       <div className="border rounded-md">
         <div className="flex flex-col sm:flex-row items-center m-4">
           <Input
@@ -336,10 +336,10 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
                           <div className="flex items-center gap-2 mt-2 sm:mt-0">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" className="h-8 w-8 p-0">
-                                            <span className="sr-only">Open menu</span>
-                                            <MoreHorizontal className="h-4 w-4" />
-                                          </Button>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -384,51 +384,51 @@ const handleScoreChange = (criteriaId: string, value: string | number) => {
                   {selectedDormer && (` - Room: ${selectedDormer.room}`)}
                 </DialogTitle>
               </DialogHeader>
-                  <ScrollArea className="max-h-[70vh]">
+              <ScrollArea className="h-[60vh] rounded-md border border-transparent">
                 {selectedDormer ? (
-                    <div className="space-y-4">
-                      {extendedCriteria.map((pc) => (
-                        <Card key={pc.id}>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm sm:text-base font-medium flex justify-between">
-                              <span>{pc.criteria.name}</span>
-                              <span className="text-xs text-muted-foreground font-normal">
-                                Max: {pc.max_score}
-                              </span>
-                            </CardTitle>
-                            <p className="text-xs sm:text-sm text-muted-foreground">
-                              {pc.criteria.description}
-                            </p>
-                          </CardHeader>
+                  <div className="space-y-4">
+                    {extendedCriteria.map((pc) => (
+                      <Card key={pc.id}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm sm:text-base font-medium flex justify-between">
+                            <span>{pc.criteria.name}</span>
+                            <span className="text-xs text-muted-foreground font-normal">
+                              Max: {pc.max_score}
+                            </span>
+                          </CardTitle>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            {pc.criteria.description}
+                          </p>
+                        </CardHeader>
 
-                          <CardContent>
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                              <label className="text-xs sm:text-sm font-medium">Score:</label>
-                              <Input
-                                type="number"
-                                min={0}
-                                max={pc.max_score}
-                                placeholder={"Enter Score"}
-                                value={scores[pc.id] || ""}
-                                onChange={(e) => handleScoreChange(pc.id, e.target.value)}
-                                required
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                        <CardContent>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                            <label className="text-xs sm:text-sm font-medium">Score:</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={pc.max_score}
+                              placeholder={"Enter Score"}
+                              value={scores[pc.id] || ""}
+                              onChange={(e) => handleScoreChange(pc.id, e.target.value)}
+                              required
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 ) : (
                   <p>No dormer selected.</p>
                 )}
-                </ScrollArea>
-                <DialogFooter>
-                  <div className="flex justify-end gap-2 pt-2">
-                        <Button size="sm" onClick={() => { handleSave() }} disabled={isLoading} >
-                          {isLoading ? <Spinner /> : "Save"}
-                        </Button>
-                      </div>
-                </DialogFooter>
+              </ScrollArea>
+              <DialogFooter>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button size="sm" onClick={() => { handleSave() }} disabled={isLoading} >
+                    {isLoading ? <Spinner /> : "Save"}
+                  </Button>
+                </div>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
           <EvaluationEdit
