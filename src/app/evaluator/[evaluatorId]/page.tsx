@@ -35,7 +35,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { EvaluationEdit } from "../components/evaluation-edit"
 
@@ -45,7 +44,8 @@ export default function EvaluatorPage() {
   const periodEvaluatorId = params?.evaluatorId ?? null
   const [evaluationPeriodId, setEvaluationPeriodId] = useState<string | null>(null)
   const [evaluatorDormerId, setEvaluatorDormerId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [isDormersLoading, setIsDormersLoading] = useState(true)
   const [dormers, setDormers] = useState<Dormer[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -170,13 +170,18 @@ export default function EvaluatorPage() {
       } catch (error) {
         toast.error("Failed to fetch dormers.")
         console.error("Error fetching dormers:", error)
+      } finally {
+        setIsDormersLoading(false)
       }
     }
     fetchDormers()
   }, [supabase])
 
   const getInfo = useCallback(async () => {
-    if (!periodEvaluatorId) return
+    if (!periodEvaluatorId) {
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -289,6 +294,14 @@ export default function EvaluatorPage() {
     } finally {
       setIsExiting(false)
     }
+  }
+
+  if (loading || isDormersLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Spinner className="size-10" />
+      </div>
+    )
   }
 
   return (
