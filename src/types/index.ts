@@ -56,3 +56,16 @@ export type ObjectiveScores = {
 export type ExtendedPeriodCriteria = PeriodCriteria & {
     criteria: Criteria;
 };
+export type Results = {
+    id: string;
+    target_dormer_id: string;
+    total_weighted_score: number;
+    evaluation_period_id: string;
+}
+export type ResultsPerCriteria = {
+    id: string;
+    period_criteria_id: string;
+    target_dormer_id: string;
+    total_score: number;
+    evaluation_period_id: string;
+}

@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog"
-import { ExtendedPeriodCriteria, SubjectiveScores, Dormer} from "@/types"
+import { ExtendedPeriodCriteria, SubjectiveScores, Dormer } from "@/types"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
@@ -37,9 +37,8 @@ export function EvaluationEdit({
 }) {
     const supabase = createClient()
     const [isLoading, setIsLoading] = useState(false)
-    const[scores, setScores] = useState<SubjectiveScores[]>([])
     const [scoresMap, setScoresMap] = useState<Record<string, number | "">>({})
-    const[dormer, setDormer] = useState<Dormer | null>(null)
+    const [dormer, setDormer] = useState<Dormer | null>(null)
     const [periodCriteria, setPeriodCriteria] = useState<ExtendedPeriodCriteria[]>([])
     useEffect(() => {
         const fetchPeriodCriteria = async () => {
@@ -102,7 +101,6 @@ export function EvaluationEdit({
                     throw error
                 }
                 const fetched = data as SubjectiveScores[]
-                setScores(fetched)
                 const mapping: Record<string, number> = {}
                 fetched.forEach((s) => {
                     if (s && s.period_criteria_id) mapping[String(s.period_criteria_id)] = s.score ?? 0
@@ -123,7 +121,7 @@ export function EvaluationEdit({
         try {
             for (const pc of periodCriteria) {
                 const value = scoresMap[String(pc.id)] ?? 0
-                const { data, error } = await supabase
+                const { error } = await supabase
                     .from("subjective_scores")
                     .update({ score: value })
                     .eq("period_criteria_id", pc.id)
@@ -185,48 +183,48 @@ export function EvaluationEdit({
                     <DialogTitle className="text-primary">Edit Evaluation for {dormer && `${dormer.first_name} ${dormer.last_name}`}</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="max-h-[70vh]">
-                                        {dormer ? (
-                                                <div className="space-y-4 p-4">
-                                                        {periodCriteria.map((pc) => (
-                                                <Card key={pc.id}>
-                                                    <CardHeader className="pb-2">
-                                                        <CardTitle className="text-base font-medium flex justify-between">
-                                                            <span>{pc.criteria.name}</span>
-                                                            <span className="text-xs text-muted-foreground font-normal">
-                                                                Max: {pc.max_score}
-                                                            </span>
-                                                        </CardTitle>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {pc.criteria.description}
-                                                        </p>
-                                                    </CardHeader>
+                    {dormer ? (
+                        <div className="space-y-4 p-4">
+                            {periodCriteria.map((pc) => (
+                                <Card key={pc.id}>
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="text-base font-medium flex justify-between">
+                                            <span>{pc.criteria.name}</span>
+                                            <span className="text-xs text-muted-foreground font-normal">
+                                                Max: {pc.max_score}
+                                            </span>
+                                        </CardTitle>
+                                        <p className="text-sm text-muted-foreground">
+                                            {pc.criteria.description}
+                                        </p>
+                                    </CardHeader>
 
-                                                    <CardContent>
-                                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                                                            <label className="text-sm font-medium">Score:</label>
-                                                                <Input
-                                                                key={pc.id}
-                                                                type="number"
-                                                                value={scoresMap[String(pc.id)] ?? ""}
-                                                                onChange={(e) => handleScoreChange(String(pc.id), e.target.value)}
-                                                                min={0}
-                                                                max={pc.max_score}
-                                                                className="w-full sm:max-w-[200px]"
-                                                                />
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                                                ))}
-                                                </div>
-                                        ) : (
-                                                <div>Loading dormer information...</div>
-                                        )}
+                                    <CardContent>
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                                            <label className="text-sm font-medium">Score:</label>
+                                            <Input
+                                                key={pc.id}
+                                                type="number"
+                                                value={scoresMap[String(pc.id)] ?? ""}
+                                                onChange={(e) => handleScoreChange(String(pc.id), e.target.value)}
+                                                min={0}
+                                                max={pc.max_score}
+                                                className="w-full sm:max-w-[200px]"
+                                            />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <div>Loading dormer information...</div>
+                    )}
                 </ScrollArea>
-            <DialogFooter>
-                <Button onClick={handleSave} disabled={isLoading}>
-                    {isLoading ? <Spinner /> : "Save"}
-                </Button>
-            </DialogFooter>
+                <DialogFooter>
+                    <Button onClick={handleSave} disabled={isLoading}>
+                        {isLoading ? <Spinner /> : "Save"}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     )

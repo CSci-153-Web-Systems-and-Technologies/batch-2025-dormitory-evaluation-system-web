@@ -25,7 +25,7 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Dormers", url: "/dormers", icon: Users },
   { title: "Evaluation", url: "/evaluation", icon: FileText },
-  { title: "Results", url: "/#", icon: BarChart },
+  { title: "Results", url: "/results", icon: BarChart },
   { title: "Settings", url: "/#", icon: Settings },
 ]
 
@@ -43,7 +43,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarHeader>
-          
+
           <div className="flex items-center">
             <GalleryVerticalEnd className="h-4 w-4 m-2" />
             <h1 className="text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden text-primary">
