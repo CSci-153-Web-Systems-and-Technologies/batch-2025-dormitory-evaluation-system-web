@@ -50,7 +50,7 @@ export async function storeResultsPerDormer(evaluationPeriodId: string) {
                         ss.target_dormer_id === dormer.id
                 )
 
-                const objectiveScore = objectiveScores.find(
+                const objectiveScore = objectiveScores.filter(
                     os => os.period_criteria_id === pc.id &&
                         os.target_dormer_id === dormer.id
                 )
@@ -64,8 +64,12 @@ export async function storeResultsPerDormer(evaluationPeriodId: string) {
                     )
                     rawScore = sumSubjectiveScores / subjectiveScoresForCriteria.length
                 }
-                else if (objectiveScore) {
-                    rawScore = objectiveScore.score || 0
+                else if (objectiveScore.length > 0) {
+                    const sumObjectiveScores = objectiveScore.reduce(
+                        (sum, os) => sum + (os.score || 0),
+                        0
+                    )
+                    rawScore = sumObjectiveScores / objectiveScore.length
                 }
 
                 if (rawScore > 0) {
