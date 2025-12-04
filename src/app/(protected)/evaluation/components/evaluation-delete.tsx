@@ -1,13 +1,13 @@
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 import React from "react"
@@ -15,8 +15,8 @@ import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
 export function EvaluationDelete({ onSuccess, evaluationId, open, onOpenChange, trigger }: { onSuccess?: () => void, evaluationId: string, open?: boolean, onOpenChange?: (open: boolean) => void, trigger?: React.ReactNode }) {
-  const supabase = React.useMemo(() => createClient(), [])
-  const [loading, setLoading] = React.useState(false)
+    const supabase = React.useMemo(() => createClient(), [])
+    const [loading, setLoading] = React.useState(false)
     async function onDelete() {
         setLoading(true)
         try {
@@ -35,7 +35,7 @@ export function EvaluationDelete({ onSuccess, evaluationId, open, onOpenChange, 
         } catch (error) {
             console.error("Unexpected error deleting evaluation period:", error)
             toast.error("Failed to delete evaluation period. Please try again.")
-        }      finally {
+        } finally {
             setLoading(false)
         }
     }
@@ -48,9 +48,9 @@ export function EvaluationDelete({ onSuccess, evaluationId, open, onOpenChange, 
             )}
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to delete this evaluation session?</AlertDialogTitle>
+                    <AlertDialogTitle>Are you sure you want to delete this evaluator?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the evaluation session from the system.
+                        This action cannot be undone. This will permanently delete the evaluator from the system.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

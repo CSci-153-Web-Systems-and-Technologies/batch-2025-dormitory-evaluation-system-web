@@ -16,17 +16,11 @@ import {
     AlertDialogAction,
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
-import {
-    Empty,
-    EmptyDescription,
-    EmptyHeader,
-    EmptyTitle,
-} from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle as CardTitleUI, CardDescription as CardDescriptionUI, CardFooter } from "@/components/ui/card"
 import React from "react";
-import { Pencil, PlusIcon } from "lucide-react";
+import { Pencil, Plus, Trash2, Save, X, Search, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"
@@ -35,7 +29,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Criteria, PeriodCriteria } from "@/types";
 import { Progress } from "@/components/ui/progress"
 import CriterionAdd from "./criterion-add"
-export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trigger: React.ReactNode}) {
+
+export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, trigger: React.ReactNode }) {
     const supabase = createClient();
     const [open, setOpen] = React.useState(false);
     const [criteria, setCriteria] = React.useState<Criteria[]>([]);
@@ -47,6 +42,8 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
     const [editWeights, setEditWeights] = React.useState<Record<string, string>>({});
     const [editMaxScores, setEditMaxScores] = React.useState<Record<string, string>>({});
     const [editLoading, setEditLoading] = React.useState(false);
+    const [searchQuery, setSearchQuery] = React.useState("");
+
     const sumTyped = React.useMemo(() => Object.values(inputWeights).reduce((s, v) => s + (parseInt(v || "0", 10) || 0), 0), [inputWeights]);
 
     const editDelta = React.useMemo(() => {
@@ -64,7 +61,8 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         const total = currentWeight + sumTyped + editDelta;
         return Math.min(100, Math.max(0, total));
     }, [currentWeight, sumTyped, editDelta]);
-    const [selectedPeriodCriteria, setSelectedPeriodCriteria] = React.useState<PeriodCriteria []>([]);
+
+    const [selectedPeriodCriteria, setSelectedPeriodCriteria] = React.useState<PeriodCriteria[]>([]);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
 
@@ -131,6 +129,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         setEditingId(null);
         toast.success("Criteria updated");
     }, [periodCriteria, editWeights, editMaxScores, currentWeight, sumTyped, supabase]);
+
     const isSelected = React.useCallback((pcId: string) => selectedPeriodCriteria.some(s => s.id === pcId), [selectedPeriodCriteria]);
     const toggleSelect = React.useCallback((pcId: string, checked: boolean) => {
         const pc = periodCriteria.find(p => p.id === pcId);
@@ -138,8 +137,9 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         if (checked) setSelectedPeriodCriteria(prev => [...prev, pc]);
         else setSelectedPeriodCriteria(prev => prev.filter(item => item.id !== pcId));
     }, [periodCriteria]);
+
     const closeConfirmDelete = React.useCallback(() => setConfirmDeleteOpen(false), []);
-    
+
     const setEditWeightFor = React.useCallback((pcId: string, raw: string) => {
         if (raw === "") { setEditWeights(prev => ({ ...prev, [pcId]: "" })); return; }
         let n = parseInt(raw, 10);
@@ -195,7 +195,6 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         return m;
     }, [periodCriteria, setEditMaxFor]);
 
-    
 
     React.useEffect(() => {
         const fetchCurrentTotalWeight = async () => {
@@ -293,6 +292,7 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         if (isNaN(maxScore) || maxScore < 1) { toast.error("Please enter a valid max score (>= 1)"); return; }
         await handleAddCriteria(critId, weight, maxScore);
     }, [getRemaining, handleAddCriteria, inputWeights, inputMaxScores]);
+
     const addHandlers = React.useMemo(() => {
         const m: Record<string, () => void> = {};
         criteria.forEach(c => { m[c.id] = () => handleAddClick(c.id); });
@@ -310,204 +310,288 @@ export function CriteriaAdd({evaluationId, trigger}: {evaluationId: string, trig
         criteria.forEach(c => { m[c.id] = (e) => handleMaxScoreChange(c.id, e.target.value); });
         return m;
     }, [criteria, handleMaxScoreChange]);
+
+    const filteredCriteria = React.useMemo(() => {
+        if (!searchQuery) return criteria;
+        return criteria.filter(c =>
+            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.description.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [criteria, searchQuery]);
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
-                        {trigger}
-                    </DialogTrigger>
-          <DialogContent className="!w-[66vw] !max-w-[1200px] sm:!w-[90vw]">
-              <DialogHeader>
-                  <DialogTitle className="text-primary text-2xl">Add Criteria</DialogTitle>
-                  <DialogDescription>
-                      Add a new criteria to the evaluation.
-                  </DialogDescription>
-                    <div className="my-4">
-                        <Progress value={prospectiveTotal} max={100} />
-                        <span className="text-sm text-muted-foreground">{prospectiveTotal}% of total weight (current: {currentWeight}%)</span>
-                    </div>
-              </DialogHeader>
-              <Tabs>
-                    <TabsList>
-                        <TabsTrigger value="criteria">Criteria</TabsTrigger>
-                        <TabsTrigger value="add-criteria">Add Criteria</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="criteria">
-                        <div className="flex justify-end gap-2 mb-4">
-                            <Button variant="ghost" onClick={selectVisible}>Select visible</Button>
-                            <Button variant="outline" onClick={clearSelected}>Clear</Button>
+            <DialogTrigger asChild>
+                {trigger}
+            </DialogTrigger>
+            <DialogContent className="!w-[80vw] !max-w-[1000px] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+                <div className="p-6 pb-2 border-b">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold text-primary flex items-center gap-2">
+                            Manage Criteria
+                        </DialogTitle>
+                        <DialogDescription>
+                            Configure the criteria and weights for this evaluation period.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-6 mb-2 space-y-2">
+                        <div className="flex justify-between text-sm font-medium">
+                            <span>Total Weight Allocation</span>
+                            <span className={prospectiveTotal === 100 ? "text-green-600" : "text-muted-foreground"}>
+                                {prospectiveTotal}% / 100%
+                            </span>
                         </div>
-                        {periodCriteria.length === 0 ? (
-                            <Empty>
-                                <EmptyHeader>
-                                    <EmptyTitle>No Criteria Added</EmptyTitle>
-                                    <EmptyDescription>
-                                        No criteria have been added to this evaluation period yet.
-                                    </EmptyDescription>
-                                </EmptyHeader>
-                                </Empty>
-                                ) : (
-                                    <ScrollArea className="h-96 mt-4">
-                                        <div className="space-y-4 p-2">
+                        <Progress
+                            value={prospectiveTotal}
+                            max={100}
+                            className={`h-2 ${prospectiveTotal === 100 ? "[&>div]:bg-green-500" : ""}`}
+                        />
+                    </div>
+                </div>
+
+                <Tabs defaultValue="criteria" className="flex-1 flex flex-col overflow-hidden">
+                    <div className="px-6 pt-4">
+                        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                            <TabsTrigger value="criteria">Current Criteria</TabsTrigger>
+                            <TabsTrigger value="add-criteria">Add New Criteria</TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    <TabsContent value="criteria" className="flex-1 flex flex-col overflow-hidden p-0 m-0">
+                        <div className="p-6 pt-4 flex-1 flex flex-col overflow-hidden">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-semibold">Assigned Criteria</h3>
+                                <div className="flex gap-2">
+                                    {selectedPeriodCriteria.length > 0 && (
+                                        <Button variant="destructive" size="sm" onClick={openConfirmDelete}>
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Delete Selected ({selectedPeriodCriteria.length})
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="border rounded-md flex-1 overflow-hidden flex flex-col">
+                                <div className="bg-muted/50 border-b px-4 py-2 grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-4 text-sm font-medium text-muted-foreground">
+                                    <div className="w-8">
+                                        <Input
+                                            type="checkbox"
+                                            className="w-4 h-4 translate-y-0.5"
+                                            checked={periodCriteria.length > 0 && selectedPeriodCriteria.length === periodCriteria.length}
+                                            onChange={(e) => e.target.checked ? selectVisible() : clearSelected()}
+                                        />
+                                    </div>
+                                    <div>Criteria Details</div>
+                                    <div className="text-center">Weight (%)</div>
+                                    <div className="text-center">Max Score</div>
+                                    <div className="w-20 text-right">Actions</div>
+                                </div>
+                                <ScrollArea className="h-[calc(80vh-250px)]">
+                                    {periodCriteria.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                                            <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
+                                            <p>No criteria assigned yet.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y">
                                             {periodCriteria.map((pc) => {
                                                 const crit = criteria.find(c => c.id === pc.criterion_id);
                                                 const isEditing = editingId === pc.id;
                                                 const allowed = Math.max(0, 100 - currentWeight + pc.weight - sumTyped);
+
                                                 return (
-                                                    <Card key={pc.id}>
-                                                        <CardContent>
-                                                            <div className="flex justify-between items-start">
-                                                            <div className="flex flex-col w-full">
-                                                                <div className="flex items-center gap-2 justify-between w-full">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="font-semibold text-lg text-primary">{crit?.name}</span>
-                                                                        {crit?.type === 'objective' ? (
-                                                                            <Badge className="w-fit bg-blue-100 text-blue-800 mb-1">Objective</Badge>
-                                                                        ) : (
-                                                                            <Badge className="w-fit bg-purple-100 text-purple-800 mb-1">Subjective</Badge>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <span className="text-sm text-muted-foreground">{crit?.description}</span>
-                                                                {isEditing ? (
-                                                                    <div className="mt-3">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <Input
-                                                                                type="number"
-                                                                                min={1}
-                                                                                max={allowed}
-                                                                                value={editWeights[pc.id] ?? String(pc.weight)}
-                                                                                onChange={editWeightHandlers[pc.id]}
-                                                                                className="w-24"
-                                                                            />
-                                                                            <Input
-                                                                                type="number"
-                                                                                min={1}
-                                                                                value={editMaxScores[pc.id] ?? String((pc as PeriodCriteria).max_score ?? "")}
-                                                                                onChange={editMaxHandlers[pc.id]}
-                                                                                className="w-28"
-                                                                            />
-                                                                        </div>
-                                                                        <div className="mt-2 flex justify-end gap-2">
-                                                                            <Button onClick={saveEditHandlers[pc.id]} disabled={editLoading}>{editLoading ? 'Saving...' : 'Save'}</Button>
-                                                                            <Button variant="ghost" onClick={cancelEditHandlers[pc.id]}>Cancel</Button>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                                                                        <Badge className="bg-slate-100 text-slate-800">Weight: {pc.weight}%</Badge>
-                                                                        {pc.max_score !== undefined && (
-                                                                            <Badge className="bg-slate-100 text-slate-800">Max Score: {pc.max_score}</Badge>
-                                                                        )}
-                                                                    </div>
-                                                                )}
+                                                    <div key={pc.id} className="px-4 py-3 grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-4 items-center hover:bg-muted/30 transition-colors">
+                                                        <div className="w-8">
+                                                            <Input
+                                                                type="checkbox"
+                                                                className="w-4 h-4"
+                                                                checked={isSelected(pc.id)}
+                                                                onChange={periodCheckboxHandlers[pc.id]}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium text-foreground">{crit?.name}</div>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                                                                    {crit?.type === 'objective' ? 'Objective' : 'Subjective'}
+                                                                </Badge>
+                                                                <span className="text-xs text-muted-foreground line-clamp-1">{crit?.description}</span>
                                                             </div>
-                                                            <div className="flex flex-row items-center gap-2">
-                                                                <Pencil 
-                                                                    className="cursor-pointer text-primary w-5 h-5"
-                                                                    onClick={startEditHandlers[pc.id]}
+                                                        </div>
+
+                                                        <div className="flex justify-center">
+                                                            {isEditing ? (
+                                                                <Input
+                                                                    type="number"
+                                                                    className="w-20 h-8 text-center"
+                                                                    min={1}
+                                                                    max={allowed}
+                                                                    value={editWeights[pc.id] ?? String(pc.weight)}
+                                                                    onChange={editWeightHandlers[pc.id]}
                                                                 />
-                                                                <Input type="checkbox" className="w-5 h-5" checked={isSelected(pc.id)} onChange={periodCheckboxHandlers[pc.id]} />
-                                                            </div>
-                                                            </div>
-                                                        </CardContent>
-                                                    </Card>
+                                                            ) : (
+                                                                <Badge variant="secondary" className="font-mono text-sm">
+                                                                    {pc.weight}%
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="flex justify-center">
+                                                            {isEditing ? (
+                                                                <Input
+                                                                    type="number"
+                                                                    className="w-20 h-8 text-center"
+                                                                    min={1}
+                                                                    value={editMaxScores[pc.id] ?? String((pc as PeriodCriteria).max_score ?? "")}
+                                                                    onChange={editMaxHandlers[pc.id]}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-sm font-mono text-muted-foreground">
+                                                                    {pc.max_score ?? "-"}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="flex justify-end w-20 gap-1">
+                                                            {isEditing ? (
+                                                                <>
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={saveEditHandlers[pc.id]}>
+                                                                        <Save className="w-4 h-4" />
+                                                                    </Button>
+                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={cancelEditHandlers[pc.id]}>
+                                                                        <X className="w-4 h-4" />
+                                                                    </Button>
+                                                                </>
+                                                            ) : (
+                                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={startEditHandlers[pc.id]}>
+                                                                    <Pencil className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 );
                                             })}
                                         </div>
-                                    </ScrollArea>
-                                )}
-                                <div>
-                                    <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Delete selected criteria?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action will delete the selected criteria for this evaluation period. This cannot be undone.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel onClick={closeConfirmDelete}>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction disabled={isDeleting} onClick={handleDeleteSelectedPeriodCriteria} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
-                                                    {isDeleting ? 'Deleting...' : 'Delete'}
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                        <div className="flex justify-end gap-2">
-                                        <Button className="mt-4" disabled={selectedPeriodCriteria.length === 0} variant="destructive" onClick={openConfirmDelete}>Delete</Button>
-                                    </div>
+                                    )}
+                                </ScrollArea>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="add-criteria" className="flex-1 flex flex-col overflow-hidden p-0 m-0">
+                        <div className="p-6 pt-4 flex-1 flex flex-col overflow-hidden">
+                            <div className="flex justify-between items-center mb-4 gap-4">
+                                <div className="relative flex-1 max-w-sm">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search criteria..."
+                                        className="pl-9"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
                                 </div>
-                            </TabsContent>
-                    <TabsContent value="add-criteria">
-                        <div className="space-y-4 mt-4">
-                            <ScrollArea className="h-95">
-                                <div className="grid grid-cols-2 gap-4">
-                                    {criteria.map((crit) => {
+                                <CriterionAdd
+                                    trigger={
+                                        <Button>
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Create New Criteria
+                                        </Button>
+                                    }
+                                    onAdded={(c) => setCriteria(prev => [...prev, c])}
+                                />
+                            </div>
+
+                            <ScrollArea className="h-[calc(80vh-250px)]">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+                                    {filteredCriteria.map((crit) => {
                                         const alreadyAdded = periodCriteria.some(pc => pc.criterion_id === crit.id);
                                         const remaining = Math.max(0, 100 - currentWeight);
                                         const disableInputs = alreadyAdded || remaining <= 0;
-                                        return (
-                                            <Card key={crit.id} className="h-full">
-                                                <CardContent className="flex flex-col h-full">
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-semibold text-lg text-primary">{crit.name}</span>
-                                                            {crit.type === 'objective' ? (
-                                                                <Badge className="w-fit bg-blue-100 text-blue-800 mb-1">Objective</Badge>
-                                                            ) : (
-                                                                <Badge className="w-fit bg-purple-100 text-purple-800 mb-1">Subjective</Badge>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-sm text-muted-foreground">{crit.description}</span>
-                                                    </div>
 
-                                                    <div className="mt-3 space-y-2">
-                                                        <Input
-                                                            type="number"
-                                                            placeholder="Weight (e.g., 20)"
-                                                            id={`weight-${crit.id}`}
-                                                            className="w-full"
-                                                            min={1}
-                                                            max={getAddAllowed(crit.id)}
-                                                            value={inputWeights[crit.id] ?? ""}
-                                                            disabled={disableInputs}
-                                                            onChange={addWeightChangeHandlers[crit.id]}
-                                                        />
-                                                        <Input
-                                                            type="number"
-                                                            placeholder="Max Score (e.g., 100)"
-                                                            id={`maxscore-${crit.id}`}
-                                                            className="w-full"
-                                                            min={1}
-                                                            value={inputMaxScores[crit.id] ?? ""}
-                                                            disabled={disableInputs}
-                                                            onChange={addMaxChangeHandlers[crit.id]}
-                                                        />
+                                        return (
+                                            <Card key={crit.id} className={`flex flex-col ${alreadyAdded ? 'opacity-60 bg-muted/30' : 'hover:border-primary/50'} transition-all`}>
+                                                <CardHeader className="p-4 pb-2">
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <CardTitleUI className="text-base font-semibold leading-tight">
+                                                            {crit.name}
+                                                        </CardTitleUI>
+                                                        {alreadyAdded && <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />}
+                                                    </div>
+                                                    <div className="flex gap-2 mt-1">
+                                                        <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
+                                                            {crit.type === 'objective' ? 'Objective' : 'Subjective'}
+                                                        </Badge>
+                                                    </div>
+                                                    <CardDescriptionUI className="text-xs line-clamp-2 mt-2 h-8">
+                                                        {crit.description}
+                                                    </CardDescriptionUI>
+                                                </CardHeader>
+                                                <CardContent className="p-4 pt-2 flex-1">
+                                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-medium text-muted-foreground uppercase">Weight (%)</label>
+                                                            <Input
+                                                                type="number"
+                                                                placeholder="0"
+                                                                className="h-8"
+                                                                min={1}
+                                                                max={getAddAllowed(crit.id)}
+                                                                value={inputWeights[crit.id] ?? ""}
+                                                                disabled={disableInputs}
+                                                                onChange={addWeightChangeHandlers[crit.id]}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-medium text-muted-foreground uppercase">Max Score</label>
+                                                            <Input
+                                                                type="number"
+                                                                placeholder="100"
+                                                                className="h-8"
+                                                                min={1}
+                                                                value={inputMaxScores[crit.id] ?? ""}
+                                                                disabled={disableInputs}
+                                                                onChange={addMaxChangeHandlers[crit.id]}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </CardContent>
-                                                
-                                                    <div className="flex justify-end mr-4">
-                                                        <Button disabled={disableInputs} onClick={addHandlers[crit.id]}>
-                                                            {alreadyAdded ? "Added" : "Add Criteria"}
-                                                        </Button>
-                                                    </div>
+                                                <CardFooter className="p-4 pt-0">
+                                                    <Button
+                                                        className="w-full"
+                                                        size="sm"
+                                                        variant={alreadyAdded ? "outline" : "default"}
+                                                        disabled={disableInputs}
+                                                        onClick={addHandlers[crit.id]}
+                                                    >
+                                                        {alreadyAdded ? "Added" : "Add to Evaluation"}
+                                                    </Button>
+                                                </CardFooter>
                                             </Card>
                                         );
                                     })}
-                                    <CriterionAdd
-                                        trigger={
-                                            <Button variant="outline">
-                                                <PlusIcon className="ml-2" />
-                                            </Button>
-                                        }
-                                        onAdded={(c) => setCriteria(prev => [...prev, c])}
-                                    />
                                 </div>
                             </ScrollArea>
                         </div>
                     </TabsContent>
                 </Tabs>
-                </DialogContent>
-            </Dialog>
+
+                <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Delete selected criteria?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action will delete the selected criteria for this evaluation period. This cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={closeConfirmDelete}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction disabled={isDeleting} onClick={handleDeleteSelectedPeriodCriteria} className="bg-destructive hover:bg-destructive/90">
+                                {isDeleting ? 'Deleting...' : 'Delete'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </DialogContent>
+        </Dialog>
     )
-}  
+}

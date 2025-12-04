@@ -1,6 +1,7 @@
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -15,16 +16,8 @@ import {
     AlertDialogAction,
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
-import {
-    Empty,
-    EmptyDescription,
-    EmptyHeader,
-    EmptyMedia,
-    EmptyTitle,
-} from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Car } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card"
+import { Users, Search, Mail, Trash2, UserCheck, AlertCircle, CheckCircle2 } from "lucide-react";
 import React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PeriodEvaluators, Dormer } from "@/types";
@@ -32,11 +25,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Spinner } from "@/components/ui/spinner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { getEvaluatorInvitationEmail } from "@/lib/email-templates"
 
-export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: string | number, trigger?: React.ReactNode, onSuccess?: () => void }) {
+export function ManageEvaluators({ evaluationId, trigger, onSuccess }: { evaluationId?: string | number, trigger?: React.ReactNode, onSuccess?: () => void }) {
     const supabase = React.useMemo(() => createClient(), [])
     const [open, setOpen] = React.useState(false)
     const [evaluatorsIDs, setEvaluatorsIDs] = React.useState<PeriodEvaluators[]>([])
@@ -50,6 +44,9 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
     const [toAddIds, setToAddIds] = React.useState<string[]>([])
     const [isAdding, setIsAdding] = React.useState(false)
     const [evaluatorsStatus, setEvaluatorsStatus] = React.useState<string[]>([])
+    const [isLoadingEvaluators, setIsLoadingEvaluators] = React.useState(true)
+    const [isLoadingDormers, setIsLoadingDormers] = React.useState(true)
+    const [isSendingInvites, setIsSendingInvites] = React.useState(false)
 
     React.useEffect(() => {
         const fetchEvaluatorsStatus = async () => {
@@ -77,11 +74,14 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
     }, [evaluatorsIDs])
 
     const handleSendInvites = async () => {
-
         if (evaluatorsIDs.length === 0) {
             toast.error("No evaluators to send invites to.");
             return;
         }
+
+        setIsSendingInvites(true)
+        let successCount = 0
+        let failCount = 0
 
         for (const evaluator of evaluatorsIDs) {
             const email = dormers.find((d) => d.id === evaluator.dormer_id)?.email;
@@ -97,25 +97,33 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
                     body: JSON.stringify({
                         to: email,
                         subject: "Evaluator Invitation",
-                        html: `<p>You have been invited to be an evaluator. Please click the link below to access your evaluator dashboard:</p>
-                       <a href="${routerLink}">${routerLink}</a>`,
+                        html: getEvaluatorInvitationEmail(routerLink),
                     }),
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    toast.success(`Invitation sent to ${email}`);
+                    successCount++
                 } else {
                     console.error("Error sending email:", data);
-                    toast.error(`Failed to send invitation to ${email}`);
+                    failCount++
                 }
             } catch (error) {
                 console.error("Error sending email:", error);
-                toast.error(`Failed to send invitation to ${email}`);
+                failCount++
             }
+        }
+
+        setIsSendingInvites(false)
+        if (successCount > 0) {
+            toast.success(`Sent ${successCount} invitation${successCount > 1 ? 's' : ''}`)
+        }
+        if (failCount > 0) {
+            toast.error(`Failed to send ${failCount} invitation${failCount > 1 ? 's' : ''}`)
         }
     };
 
     const fetchEvaluatorsIDs = React.useCallback(async () => {
+        setIsLoadingEvaluators(true)
         const { data, error } = await createClient()
             .from("period_evaluators")
             .select("*")
@@ -126,6 +134,7 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
         } else {
             setEvaluatorsIDs(data as PeriodEvaluators[])
         }
+        setIsLoadingEvaluators(false)
     }, [evaluationId])
 
     React.useEffect(() => {
@@ -166,6 +175,7 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
 
     React.useEffect(() => {
         const fetchAll = async () => {
+            setIsLoadingDormers(true)
             const { data, error } = await supabase.from('dormers').select('*')
             if (error) {
                 console.error('Error fetching all dormers', error)
@@ -173,6 +183,7 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
             } else {
                 setAllDormers(data as Dormer[])
             }
+            setIsLoadingDormers(false)
         }
         fetchAll()
     }, [supabase])
@@ -181,8 +192,9 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
     const roomsAll = React.useMemo(() => {
         const s = new Set<string>()
         allDormers.forEach(d => s.add(d.room || ""))
-        return Array.from(s).filter(r => r !== "")
+        return Array.from(s).filter(r => r !== "").sort()
     }, [allDormers])
+
     const filteredAllDormers = React.useMemo(() => {
         const q = searchAdd.trim().toLowerCase()
         return allDormers.filter(d => {
@@ -218,7 +230,7 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
             toast.error('Failed to add evaluators')
             return
         }
-        toast.success('Evaluators added')
+        toast.success(`Added ${toInsert.length} evaluator${toInsert.length > 1 ? 's' : ''}`)
         setToAddIds([])
         await fetchEvaluatorsIDs()
     }, [evaluationId, toAddIds, assignedIds, supabase, fetchEvaluatorsIDs])
@@ -243,7 +255,7 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
             toast.error('Failed to remove evaluators')
             return
         }
-        toast.success('Evaluators removed')
+        toast.success(`Removed ${selectedEvaluators.length} evaluator${selectedEvaluators.length > 1 ? 's' : ''}`)
         setSelectedEvaluators([])
         await fetchEvaluatorsIDs()
     }, [evaluationId, selectedEvaluators, fetchEvaluatorsIDs])
@@ -255,167 +267,302 @@ export function ManageEvaluators({ evaluationId, trigger }: { evaluationId?: str
                     {trigger}
                 </DialogTrigger>
             )}
-            <DialogContent className="max-w-lg">
-                <DialogHeader>
-                    <DialogTitle className="text-2xl text-primary">Manage Evaluators</DialogTitle>
-                </DialogHeader>
-                <Tabs defaultValue="evaluators">
-                    <TabsList className="mb-4">
-                        <TabsTrigger value="evaluators">Evaluators</TabsTrigger>
-                        <TabsTrigger value="add-evaluators">Add Evaluators</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="evaluators">
-                        <div className="space-y-4">
-                            <div className="flex justify-end gap-2 mb-4">
-                                <Button onClick={handleSendInvites}>Send Invites</Button>
-                                <Button variant="ghost" onClick={() => {
-                                    const visibleIds = dormers.map(d => d.id)
-                                    setSelectedEvaluators(prev => Array.from(new Set([...prev, ...visibleIds])))
-                                }}>Select visible</Button>
-                                <Button variant="outline" onClick={() => setSelectedEvaluators([])}>Clear</Button>
+            <DialogContent className="!w-[80vw] !max-w-[900px] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+                <div className="p-6 pb-4 border-b">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold text-primary flex items-center gap-2">
+                            <Users className="w-6 h-6" />
+                            Manage Evaluators
+                        </DialogTitle>
+                        <DialogDescription>
+                            Assign dormers as evaluators and manage their evaluation status.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
+
+                <Tabs defaultValue="evaluators" className="flex-1 flex flex-col overflow-hidden">
+                    <div className="px-6 pt-4">
+                        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                            <TabsTrigger value="evaluators">Current Evaluators</TabsTrigger>
+                            <TabsTrigger value="add-evaluators">Add Evaluators</TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    <TabsContent value="evaluators" className="flex-1 flex flex-col overflow-hidden p-0 m-0">
+                        <div className="p-6 pt-4 flex-1 flex flex-col overflow-hidden">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-semibold">
+                                    {dormers.length} Evaluator{dormers.length !== 1 ? 's' : ''}
+                                </h3>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleSendInvites}
+                                        disabled={dormers.length === 0 || isSendingInvites}
+                                    >
+                                        <Mail className="w-4 h-4 mr-2" />
+                                        {isSendingInvites ? 'Sending...' : 'Send Invites'}
+                                    </Button>
+                                    {selectedEvaluators.length > 0 && (
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => setConfirmDeleteOpen(true)}
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Remove Selected ({selectedEvaluators.length})
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
 
-                            {dormers.length === 0 ? (
-                                <Empty>
-                                    <EmptyHeader>
-                                        <EmptyTitle>No Evaluators Found</EmptyTitle>
-                                        <EmptyDescription>
-                                            No evaluators have been assigned to this evaluation period.
-                                        </EmptyDescription>
-                                    </EmptyHeader>
-                                </Empty>
-                            ) : (
-                                <ScrollArea className="h-60 rounded-md border border-transparent">
-                                    <div className="space-y-4 p-1">
-                                        <div className="flex flex-col gap-2 items-center">
+                            <div className="border rounded-md flex-1 overflow-hidden flex flex-col">
+                                <div className="bg-muted/50 border-b px-4 py-2 grid grid-cols-[auto_1fr_auto] gap-4 text-sm font-medium text-muted-foreground">
+                                    <div className="w-8">
+                                        <Input
+                                            type="checkbox"
+                                            className="w-4 h-4 translate-y-0.5"
+                                            checked={dormers.length > 0 && selectedEvaluators.length === dormers.length}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedEvaluators(dormers.map(d => d.id))
+                                                } else {
+                                                    setSelectedEvaluators([])
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div>Evaluator Details</div>
+                                    <div className="w-32 text-center">Status</div>
+                                </div>
+                                <ScrollArea className="h-[calc(80vh-280px)]">
+                                    {isLoadingEvaluators ? (
+                                        <div className="p-4 space-y-3">
+                                            {[1, 2, 3].map((i) => (
+                                                <div key={i} className="flex items-center gap-4">
+                                                    <Skeleton className="h-4 w-4" />
+                                                    <div className="flex-1 space-y-2">
+                                                        <Skeleton className="h-4 w-48" />
+                                                        <Skeleton className="h-3 w-64" />
+                                                    </div>
+                                                    <Skeleton className="h-6 w-20" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : dormers.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                                            <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
+                                            <p className="font-medium">No evaluators assigned</p>
+                                            <p className="text-sm">Add dormers as evaluators to get started.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y">
                                             {dormers.map((dormer) => {
                                                 const idx = evaluatorsIDs.findIndex(e => e.dormer_id === dormer.id)
                                                 const status = idx !== -1 ? evaluatorsStatus[idx] : "Unknown"
+                                                const isSelected = selectedEvaluators.includes(dormer.id)
+
                                                 return (
-                                                    <Card key={dormer.id} className={`w-full ${selectedEvaluators.includes(dormer.id) ? 'ring-2 ring-destructive/50' : ''}`}>
-                                                        <CardContent className="flex items-center justify-between">
-                                                            <div>
-                                                                <p className="text-lg font-medium">{dormer.first_name} {dormer.last_name}</p>
-                                                                <p className="text-sm text-muted-foreground">{dormer.email} · <span className="text-muted-foreground">Room {dormer.room}</span></p>
-                                                                {status === 'pending' && (
-                                                                    <Badge className="mt-1 bg-yellow-100 text-yellow-800">Pending</Badge>
-                                                                )}
-                                                                {status === 'completed' && (
-                                                                    <Badge className="mt-1 bg-primary">Completed</Badge>
-                                                                )}
+                                                    <div
+                                                        key={dormer.id}
+                                                        className={`px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center hover:bg-muted/30 transition-colors ${isSelected ? 'bg-muted/50' : ''}`}
+                                                    >
+                                                        <div className="w-8">
+                                                            <Input
+                                                                type="checkbox"
+                                                                className="w-4 h-4"
+                                                                checked={isSelected}
+                                                                onChange={() => handleEvaluatorSelect(dormer.id)}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium text-foreground">
+                                                                {dormer.first_name} {dormer.last_name}
                                                             </div>
-                                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                                <Input type="checkbox" className="w-5 h-5" checked={selectedEvaluators.includes(dormer.id)} onChange={() => handleEvaluatorSelect(dormer.id)} />
-                                                                <span className="sr-only">Select evaluator</span>
-                                                            </label>
-                                                        </CardContent>
-                                                    </Card>
-                                                )
+                                                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                                                <span>{dormer.email}</span>
+                                                                <span>•</span>
+                                                                <span>Room {dormer.room}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="w-32 flex justify-center">
+                                                            {status === 'pending' && (
+                                                                <Badge variant="outline" className="bg-amber-500/15 text-amber-700 border-amber-200">
+                                                                    Pending
+                                                                </Badge>
+                                                            )}
+                                                            {status === 'completed' && (
+                                                                <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-200">
+                                                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                                    Completed
+                                                                </Badge>
+                                                            )}
+                                                            {status !== 'pending' && status !== 'completed' && (
+                                                                <Badge variant="outline" className="bg-slate-500/15 text-slate-700 border-slate-200">
+                                                                    {status}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
                                             })}
+                                            <div className="h-10" />
                                         </div>
-                                    </div>
+                                    )}
                                 </ScrollArea>
-                            )}
-                            <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure you want to delete this evaluation session?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the evaluation session from the system.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel onClick={() => setConfirmDeleteOpen(false)}>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction disabled={isDeleting} onClick={handleRemove} className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
-                                            {isDeleting ? "Deleting..." : "Delete"}
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                            <div className="flex justify-end gap-2">
-                                <Button
-                                    variant="destructive"
-                                    disabled={selectedEvaluators.length === 0 || !evaluationId}
-                                    onClick={() => {
-                                        if (!evaluationId) return
-                                        setConfirmDeleteOpen(true)
-                                    }}
-                                >
-                                    Delete selected
-                                </Button>
                             </div>
                         </div>
                     </TabsContent>
-                    <TabsContent value="add-evaluators">
-                        <div className="space-y-4">
-                            <div className="flex gap-2 items-center">
-                                <Input placeholder="Search dormers to add..." value={searchAdd} onChange={(e) => setSearchAdd(e.target.value)} />
+
+                    <TabsContent value="add-evaluators" className="flex-1 flex flex-col overflow-hidden p-0 m-0">
+                        <div className="p-6 pt-4 flex-1 flex flex-col overflow-hidden">
+                            <div className="flex justify-between items-center mb-4 gap-4">
+                                <div className="relative flex-1 max-w-sm">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search dormers..."
+                                        className="pl-9"
+                                        value={searchAdd}
+                                        onChange={(e) => setSearchAdd(e.target.value)}
+                                    />
+                                </div>
                                 <Select onValueChange={(v) => setSelectedRoomAdd(v)} value={selectedRoomAdd}>
-                                    <SelectTrigger className="w-[120px]">
+                                    <SelectTrigger className="w-[140px]">
                                         <SelectValue placeholder="Room" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All</SelectItem>
+                                        <SelectItem value="all">All Rooms</SelectItem>
                                         {roomsAll.map(room => (
-                                            <SelectItem key={room} value={room}>{room}</SelectItem>
+                                            <SelectItem key={room} value={room}>Room {room}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" onClick={selectAllVisibleToAdd}>Select visible</Button>
-                                <Button variant="outline" onClick={clearToAdd}>Clear</Button>
+                                <div className="flex gap-2">
+                                    {toAddIds.length > 0 && (
+                                        <Button
+                                            onClick={handleAddSelected}
+                                            disabled={isAdding}
+                                            size="sm"
+                                        >
+                                            <UserCheck className="w-4 h-4 mr-2" />
+                                            {isAdding ? 'Adding...' : `Add Selected (${toAddIds.length})`}
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
 
-                            {filteredAllDormers.length === 0 ? (
-                                <Empty>
-                                    <EmptyHeader>
-                                        <EmptyMedia>
-                                            <Car className="h-12 w-12 text-muted-foreground" />
-                                        </EmptyMedia>
-                                        <EmptyTitle>No Dormers</EmptyTitle>
-                                        <EmptyDescription>No dormers match the filter.</EmptyDescription>
-                                    </EmptyHeader>
-                                </Empty>
-                            ) : (
-                                <ScrollArea className="h-60 rounded-md border border-transparent">
-                                    <div className="space-y-2 p-1">
-                                        {filteredAllDormers.map(d => {
-                                            const isAssigned = assignedIds.has(d.id)
-                                            const isSelected = toAddIds.includes(d.id)
-                                            return (
-                                                <Card key={d.id} className={`mb-2 ${isAssigned ? 'opacity-60 cursor-not-allowed' : ''} ${!isAssigned && isSelected ? 'ring-2 ring-primary/60' : ''}`}>
-                                                    <CardContent className="flex items-center justify-between">
-                                                        <div>
-                                                            <p className="font-medium">{d.first_name} {d.last_name}</p>
-                                                            <p className="text-sm text-muted-foreground">{d.email} · <span className="text-muted-foreground">Room {d.room}</span></p>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                                <Input
-                                                                    type="checkbox"
-                                                                    checked={isAssigned ? true : isSelected}
-                                                                    disabled={isAssigned}
-                                                                    onChange={() => { if (!isAssigned) toggleToAdd(d.id) }}
-                                                                    className="w-5 h-5"
-                                                                />
-                                                                <span className="sr-only">Select to add</span>
-                                                            </label>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            )
-                                        })}
+                            <div className="border rounded-md flex-1 overflow-hidden flex flex-col">
+                                <div className="bg-muted/50 border-b px-4 py-2 grid grid-cols-[auto_1fr_auto] gap-4 text-sm font-medium text-muted-foreground">
+                                    <div className="w-8">
+                                        <Input
+                                            type="checkbox"
+                                            className="w-4 h-4 translate-y-0.5"
+                                            checked={filteredAllDormers.filter(d => !assignedIds.has(d.id)).length > 0 &&
+                                                filteredAllDormers.filter(d => !assignedIds.has(d.id)).every(d => toAddIds.includes(d.id))}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    selectAllVisibleToAdd()
+                                                } else {
+                                                    clearToAdd()
+                                                }
+                                            }}
+                                        />
                                     </div>
-                                </ScrollArea>
-                            )}
+                                    <div>Dormer Details</div>
+                                    <div className="w-24 text-center">Status</div>
+                                </div>
+                                <ScrollArea className="h-[calc(80vh-280px)]">
+                                    {isLoadingDormers ? (
+                                        <div className="p-4 space-y-3">
+                                            {[1, 2, 3, 4, 5].map((i) => (
+                                                <div key={i} className="flex items-center gap-4">
+                                                    <Skeleton className="h-4 w-4" />
+                                                    <div className="flex-1 space-y-2">
+                                                        <Skeleton className="h-4 w-48" />
+                                                        <Skeleton className="h-3 w-64" />
+                                                    </div>
+                                                    <Skeleton className="h-6 w-20" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : filteredAllDormers.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                                            <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
+                                            <p className="font-medium">No dormers found</p>
+                                            <p className="text-sm">Try adjusting your search or filter.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y">
+                                            {filteredAllDormers.map(d => {
+                                                const isAssigned = assignedIds.has(d.id)
+                                                const isSelected = toAddIds.includes(d.id)
 
-                            <div className="flex justify-end gap-2">
-                                <Button onClick={handleAddSelected} disabled={isAdding}>
-                                    {isAdding ? <Spinner /> : 'Add selected'}
-                                </Button>
+                                                return (
+                                                    <div
+                                                        key={d.id}
+                                                        className={`px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted/30'
+                                                            } ${!isAssigned && isSelected ? 'bg-muted/50' : ''}`}
+                                                    >
+                                                        <div className="w-8">
+                                                            <Input
+                                                                type="checkbox"
+                                                                className="w-4 h-4"
+                                                                checked={isAssigned ? true : isSelected}
+                                                                disabled={isAssigned}
+                                                                onChange={() => { if (!isAssigned) toggleToAdd(d.id) }}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium text-foreground">
+                                                                {d.first_name} {d.last_name}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                                                <span>{d.email}</span>
+                                                                <span>•</span>
+                                                                <span>Room {d.room}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="w-24 flex justify-center">
+                                                            {isAssigned && (
+                                                                <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-200 text-xs">
+                                                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                                    Added
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="h-10" />
+                                        </div>
+                                    )}
+                                </ScrollArea>
                             </div>
                         </div>
                     </TabsContent>
                 </Tabs>
+
+                <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Remove selected evaluators?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action will remove {selectedEvaluators.length} evaluator{selectedEvaluators.length > 1 ? 's' : ''} from this evaluation period. This cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setConfirmDeleteOpen(false)}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                disabled={isDeleting}
+                                onClick={handleRemove}
+                                className="bg-destructive hover:bg-destructive/90"
+                            >
+                                {isDeleting ? "Removing..." : "Remove"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </DialogContent>
         </Dialog>
     )

@@ -11,13 +11,15 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Dormer, ExtendedPeriodCriteria, ObjectiveScores } from '@/types'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dormer, ExtendedPeriodCriteria } from '@/types'
 import { createClient } from "@/lib/supabase/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
-import { MoreHorizontal, Pencil, Check } from 'lucide-react'
+import { Search, CheckCircle2, AlertCircle, FileEdit, Save, X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Progress } from "@/components/ui/progress"
 
 interface EvaluationObjectiveInputProps {
     evaluationId: string
@@ -34,6 +36,8 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
     const [selectedDormer, setSelectedDormer] = React.useState<Dormer | null>(null)
     const [scores, setScores] = React.useState<Record<string, number | "">>({})
     const [isLoading, setIsLoading] = React.useState(false)
+    const [isLoadingDormers, setIsLoadingDormers] = React.useState(true)
+    const [isLoadingCriteria, setIsLoadingCriteria] = React.useState(true)
     const [evaluatedDormers, setEvaluatedDormers] = React.useState<Set<string>>(new Set())
     const [search, setSearch] = React.useState("")
     const [selectedRoom, setSelectedRoom] = React.useState<string>("all")
@@ -54,6 +58,7 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
     }, [dormers, search, selectedRoom])
 
     const fetchDormers = React.useCallback(async () => {
+        setIsLoadingDormers(true)
         const { data, error } = await supabase.from("dormers").select("*")
         if (error) {
             console.error("Error fetching dormers:", error)
@@ -61,6 +66,7 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
         } else {
             setDormers(data as Dormer[])
         }
+        setIsLoadingDormers(false)
     }, [supabase])
 
     React.useEffect(() => {
@@ -86,6 +92,7 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
     }, [fetchEvaluatedDormers])
 
     const fetchObjectiveCriteria = React.useCallback(async () => {
+        setIsLoadingCriteria(true)
         const { data, error } = await supabase
             .from("period_criteria")
             .select(`
@@ -102,6 +109,7 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
         } else {
             setObjectiveCriteria(data as ExtendedPeriodCriteria[])
         }
+        setIsLoadingCriteria(false)
     }, [supabase, evaluationId])
 
     React.useEffect(() => {
@@ -184,10 +192,12 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
 
             if (error) throw error
 
-            toast.success("Scores saved successfully")
+            toast.success(`Scores saved for ${selectedDormer.first_name} ${selectedDormer.last_name}`)
             setIsInputOpen(false)
-            fetchEvaluatedDormers()
-            if (onSuccess) onSuccess()
+            setSelectedDormer(null)
+            setScores({})
+            await fetchEvaluatedDormers()
+            // if (onSuccess) onSuccess() // Commented out to keep dialog open
         } catch (error) {
             console.error("Error saving scores:", error)
             toast.error("Failed to save scores")
@@ -196,96 +206,218 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
         }
     }
 
+    const evaluationProgress = dormers.length > 0 ? (evaluatedDormers.size / dormers.length) * 100 : 0
+
     return (
         <>
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
                     {trigger}
                 </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl text-primary">Input Objective Scores</DialogTitle>
-                        <DialogDescription>
-                            Select a dormer to input scores &bull; {evaluatedDormers.size} / {dormers.length} Evaluated
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex gap-2 items-center mb-4 px-1">
-                        <Input placeholder="Search dormers..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                        <Select onValueChange={(v) => setSelectedRoom(v)} value={selectedRoom}>
-                            <SelectTrigger className="w-[120px]">
-                                <SelectValue placeholder="Room" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All</SelectItem>
-                                {rooms.map(room => (
-                                    <SelectItem key={room} value={room}>{room}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                <DialogContent className="!w-[80vw] !max-w-[900px] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+                    <div className="p-6 pb-4 border-b">
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold text-primary flex items-center gap-2">
+                                <FileEdit className="w-6 h-6" />
+                                Input Objective Scores
+                            </DialogTitle>
+                            <DialogDescription>
+                                Select a dormer to input their objective evaluation scores.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="mt-6 space-y-2">
+                            <div className="flex justify-between text-sm font-medium">
+                                <span>Evaluation Progress</span>
+                                <span className={evaluationProgress === 100 ? "text-green-600" : "text-muted-foreground"}>
+                                    {evaluatedDormers.size} / {dormers.length} Evaluated
+                                </span>
+                            </div>
+                            <Progress
+                                value={evaluationProgress}
+                                max={100}
+                                className={`h-2 ${evaluationProgress === 100 ? "[&>div]:bg-green-500" : ""}`}
+                            />
+                        </div>
                     </div>
-                    <ScrollArea className="h-[60vh] rounded-md border border-transparent">
-                        <div className="space-y-4 p-1">
-                            <div className="flex flex-col gap-2 items-center">
-                                {filteredDormers.map((dormer) => (
-                                    <Card key={dormer.id} className="w-full">
-                                        <CardHeader className="pb-2">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center gap-2">
-                                                        {evaluatedDormers.has(dormer.id) && <Check className="h-4 w-4 text-primary" />}
-                                                        <CardTitle className="text-sm sm:text-base font-medium">{dormer.first_name} {dormer.last_name}</CardTitle>
-                                                        <CardDescription>Room: {dormer.room}</CardDescription>
+
+                    <div className="p-6 pt-4 flex-1 flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-center mb-4 gap-4">
+                            <div className="relative flex-1 max-w-sm">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search dormers..."
+                                    className="pl-9"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                            <Select onValueChange={(v) => setSelectedRoom(v)} value={selectedRoom}>
+                                <SelectTrigger className="w-[140px]">
+                                    <SelectValue placeholder="Room" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Rooms</SelectItem>
+                                    {rooms.map(room => (
+                                        <SelectItem key={room} value={room}>Room {room}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="border rounded-md flex-1 overflow-hidden flex flex-col">
+                            <div className="bg-muted/50 border-b px-4 py-2 grid grid-cols-[1fr_auto_auto] gap-4 text-sm font-medium text-muted-foreground">
+                                <div>Dormer Details</div>
+                                <div className="w-24 text-center">Status</div>
+                                <div className="w-20 text-right">Action</div>
+                            </div>
+                            <ScrollArea className="h-[calc(80vh-280px)]">
+                                {isLoadingDormers ? (
+                                    <div className="p-4 space-y-3">
+                                        {[1, 2, 3, 4, 5].map((i) => (
+                                            <div key={i} className="flex items-center gap-4">
+                                                <div className="flex-1 space-y-2">
+                                                    <Skeleton className="h-4 w-48" />
+                                                    <Skeleton className="h-3 w-32" />
+                                                </div>
+                                                <Skeleton className="h-6 w-20" />
+                                                <Skeleton className="h-8 w-8" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : filteredDormers.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                                        <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
+                                        <p className="font-medium">No dormers found</p>
+                                        <p className="text-sm">Try adjusting your search or filter.</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y">
+                                        {filteredDormers.map((dormer) => {
+                                            const isEvaluated = evaluatedDormers.has(dormer.id)
+
+                                            return (
+                                                <div
+                                                    key={dormer.id}
+                                                    className="px-4 py-3 grid grid-cols-[1fr_auto_auto] gap-4 items-center hover:bg-muted/30 transition-colors"
+                                                >
+                                                    <div>
+                                                        <div className="font-medium text-foreground">
+                                                            {dormer.first_name} {dormer.last_name}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                                            <span>Room {dormer.room}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-24 flex justify-center">
+                                                        {isEvaluated ? (
+                                                            <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-200">
+                                                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                                Done
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="bg-slate-500/15 text-slate-700 border-slate-200">
+                                                                Pending
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <div className="w-20 flex justify-end">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                                            onClick={() => handleDormerClick(dormer)}
+                                                        >
+                                                            <FileEdit className="h-4 w-4" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                                <Button variant="ghost" size="sm" onClick={() => handleDormerClick(dormer)}>
-                                                    <Pencil className="h-4 w-4 text-primary" />
-                                                </Button>
-                                            </div>
-                                        </CardHeader>
-                                    </Card>
-                                ))}
-                            </div>
+                                            );
+                                        })}
+                                        <div className="h-10" />
+                                    </div>
+                                )}
+                            </ScrollArea>
                         </div>
-                    </ScrollArea>
+                    </div>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={isInputOpen} onOpenChange={setIsInputOpen}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>Rate {selectedDormer?.first_name} {selectedDormer?.last_name}</DialogTitle>
-                        <DialogDescription>
-                            Enter scores for the following criteria
-                        </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="h-[60vh] pr-4">
-                        <div className="space-y-4 py-4">
-                            {objectiveCriteria.map((criteria) => (
-                                <div key={criteria.id} className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <Label htmlFor={criteria.id}>{criteria.criteria.name}</Label>
-                                        <span className="text-xs text-muted-foreground">Max: {criteria.max_score}</span>
+                <DialogContent className="!w-[90vw] !max-w-[600px] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
+                    <div className="p-6 pb-4 border-b">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold text-primary">
+                                Rate {selectedDormer?.first_name} {selectedDormer?.last_name}
+                            </DialogTitle>
+                            <DialogDescription>
+                                Enter scores for each objective criterion below.
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+
+                    <ScrollArea className="h-[calc(80vh-220px)] px-6">
+                        {isLoadingCriteria ? (
+                            <div className="py-4 space-y-6">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="space-y-2">
+                                        <Skeleton className="h-4 w-48" />
+                                        <Skeleton className="h-10 w-full" />
+                                        <Skeleton className="h-3 w-64" />
                                     </div>
-                                    <Input
-                                        id={criteria.id}
-                                        type="number"
-                                        min={0}
-                                        max={criteria.max_score}
-                                        value={scores[criteria.id] || ''}
-                                        onChange={(e) => handleScoreChange(criteria.id, e.target.value)}
-                                        placeholder={`0 - ${criteria.max_score}`}
-                                    />
-                                    <p className="text-xs text-muted-foreground">{criteria.criteria.description}</p>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-4 space-y-6">
+                                {objectiveCriteria.map((criteria, index) => (
+                                    <div key={criteria.id} className="space-y-2 pb-4 border-b last:border-0">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <Label htmlFor={criteria.id} className="text-base font-semibold">
+                                                    {index + 1}. {criteria.criteria.name}
+                                                </Label>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {criteria.criteria.description}
+                                                </p>
+                                            </div>
+                                            <Badge variant="secondary" className="ml-2">
+                                                Max: {criteria.max_score}
+                                            </Badge>
+                                        </div>
+                                        <Input
+                                            id={criteria.id}
+                                            type="number"
+                                            min={0}
+                                            max={criteria.max_score}
+                                            value={scores[criteria.id] || ''}
+                                            onChange={(e) => handleScoreChange(criteria.id, e.target.value)}
+                                            placeholder={`Enter score (0 - ${criteria.max_score})`}
+                                            className="text-lg font-mono"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </ScrollArea>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsInputOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSave} disabled={isLoading}>
-                            {isLoading ? "Saving..." : "Save"}
-                        </Button>
-                    </DialogFooter>
+
+                    <div className="p-6 pt-4 border-t bg-muted/30">
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsInputOpen(false)}
+                                disabled={isLoading}
+                            >
+                                <X className="w-4 h-4 mr-2" />
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                disabled={isLoading || isLoadingCriteria}
+                            >
+                                <Save className="w-4 h-4 mr-2" />
+                                {isLoading ? "Saving..." : "Save Scores"}
+                            </Button>
+                        </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>

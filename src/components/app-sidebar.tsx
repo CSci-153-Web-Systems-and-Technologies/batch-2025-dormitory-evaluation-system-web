@@ -17,7 +17,7 @@ import {
 
 import { NavUser } from "@/components/nav-user"
 import useUser from "@/hooks/useUser"
-import { GalleryVerticalEnd } from "lucide-react"
+import { ClipboardCheck } from "lucide-react"
 import { User } from "@supabase/supabase-js"
 
 // Menu items.
@@ -45,8 +45,8 @@ export function AppSidebar() {
         <SidebarHeader>
 
           <div className="flex items-center">
-            <GalleryVerticalEnd className="h-4 w-4 m-2" />
-            <h1 className="text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden text-primary">
+            <ClipboardCheck className="h-4 w-4 m-2 text-primary" />
+            <h1 className="text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
               Dormitory Evaluation System
             </h1>
           </div>
