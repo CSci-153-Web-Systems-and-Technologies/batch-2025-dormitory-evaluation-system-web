@@ -336,81 +336,83 @@ export function ManageEvaluators({ evaluationId, trigger, onSuccess }: { evaluat
                                     <div>Evaluator Details</div>
                                     <div className="w-32 text-center">Status</div>
                                 </div>
-                                <ScrollArea className="h-[calc(80vh-280px)]">
-                                    {isLoadingEvaluators ? (
-                                        <div className="p-4 space-y-3">
-                                            {[1, 2, 3].map((i) => (
-                                                <div key={i} className="flex items-center gap-4">
-                                                    <Skeleton className="h-4 w-4" />
-                                                    <div className="flex-1 space-y-2">
-                                                        <Skeleton className="h-4 w-48" />
-                                                        <Skeleton className="h-3 w-64" />
+                                <div className="flex-1 min-h-0">
+                                    <ScrollArea className="w-full h-full">
+                                        {isLoadingEvaluators ? (
+                                            <div className="p-4 space-y-3">
+                                                {[1, 2, 3].map((i) => (
+                                                    <div key={i} className="flex items-center gap-4">
+                                                        <Skeleton className="h-4 w-4" />
+                                                        <div className="flex-1 space-y-2">
+                                                            <Skeleton className="h-4 w-48" />
+                                                            <Skeleton className="h-3 w-64" />
+                                                        </div>
+                                                        <Skeleton className="h-6 w-20" />
                                                     </div>
-                                                    <Skeleton className="h-6 w-20" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : dormers.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
-                                            <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
-                                            <p className="font-medium">No evaluators assigned</p>
-                                            <p className="text-sm">Add dormers as evaluators to get started.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="divide-y">
-                                            {dormers.map((dormer) => {
-                                                const idx = evaluatorsIDs.findIndex(e => e.dormer_id === dormer.id)
-                                                const status = idx !== -1 ? evaluatorsStatus[idx] : "Unknown"
-                                                const isSelected = selectedEvaluators.includes(dormer.id)
+                                                ))}
+                                            </div>
+                                        ) : dormers.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                                                <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
+                                                <p className="font-medium">No evaluators assigned</p>
+                                                <p className="text-sm">Add dormers as evaluators to get started.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="divide-y">
+                                                {dormers.map((dormer) => {
+                                                    const idx = evaluatorsIDs.findIndex(e => e.dormer_id === dormer.id)
+                                                    const status = idx !== -1 ? evaluatorsStatus[idx] : "Unknown"
+                                                    const isSelected = selectedEvaluators.includes(dormer.id)
 
-                                                return (
-                                                    <div
-                                                        key={dormer.id}
-                                                        className={`px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center hover:bg-muted/30 transition-colors ${isSelected ? 'bg-muted/50' : ''}`}
-                                                    >
-                                                        <div className="w-8">
-                                                            <Input
-                                                                type="checkbox"
-                                                                className="w-4 h-4"
-                                                                checked={isSelected}
-                                                                onChange={() => handleEvaluatorSelect(dormer.id)}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-medium text-foreground">
-                                                                {dormer.first_name} {dormer.last_name}
+                                                    return (
+                                                        <div
+                                                            key={dormer.id}
+                                                            className={`px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center hover:bg-muted/30 transition-colors ${isSelected ? 'bg-muted/50' : ''}`}
+                                                        >
+                                                            <div className="w-8">
+                                                                <Input
+                                                                    type="checkbox"
+                                                                    className="w-4 h-4"
+                                                                    checked={isSelected}
+                                                                    onChange={() => handleEvaluatorSelect(dormer.id)}
+                                                                />
                                                             </div>
-                                                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                                                <span>{dormer.email}</span>
-                                                                <span>•</span>
-                                                                <span>Room {dormer.room}</span>
+                                                            <div>
+                                                                <div className="font-medium text-foreground">
+                                                                    {dormer.first_name} {dormer.last_name}
+                                                                </div>
+                                                                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                                                    <span>{dormer.email}</span>
+                                                                    <span>•</span>
+                                                                    <span>Room {dormer.room}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="w-32 flex justify-center">
+                                                                {status === 'pending' && (
+                                                                    <Badge variant="outline" className="bg-amber-500/15 text-amber-700 border-amber-200">
+                                                                        Pending
+                                                                    </Badge>
+                                                                )}
+                                                                {status === 'completed' && (
+                                                                    <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-200">
+                                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                                        Completed
+                                                                    </Badge>
+                                                                )}
+                                                                {status !== 'pending' && status !== 'completed' && (
+                                                                    <Badge variant="outline" className="bg-slate-500/15 text-slate-700 border-slate-200">
+                                                                        {status}
+                                                                    </Badge>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <div className="w-32 flex justify-center">
-                                                            {status === 'pending' && (
-                                                                <Badge variant="outline" className="bg-amber-500/15 text-amber-700 border-amber-200">
-                                                                    Pending
-                                                                </Badge>
-                                                            )}
-                                                            {status === 'completed' && (
-                                                                <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-200">
-                                                                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                                    Completed
-                                                                </Badge>
-                                                            )}
-                                                            {status !== 'pending' && status !== 'completed' && (
-                                                                <Badge variant="outline" className="bg-slate-500/15 text-slate-700 border-slate-200">
-                                                                    {status}
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            <div className="h-10" />
-                                        </div>
-                                    )}
-                                </ScrollArea>
+                                                    );
+                                                })}
+                                                <div className="h-10" />
+                                            </div>
+                                        )}
+                                    </ScrollArea>
+                                </div>
                             </div>
                         </div>
                     </TabsContent>
@@ -472,72 +474,74 @@ export function ManageEvaluators({ evaluationId, trigger, onSuccess }: { evaluat
                                     <div>Dormer Details</div>
                                     <div className="w-24 text-center">Status</div>
                                 </div>
-                                <ScrollArea className="h-[calc(80vh-280px)]">
-                                    {isLoadingDormers ? (
-                                        <div className="p-4 space-y-3">
-                                            {[1, 2, 3, 4, 5].map((i) => (
-                                                <div key={i} className="flex items-center gap-4">
-                                                    <Skeleton className="h-4 w-4" />
-                                                    <div className="flex-1 space-y-2">
-                                                        <Skeleton className="h-4 w-48" />
-                                                        <Skeleton className="h-3 w-64" />
+                                <div className="flex-1 min-h-0">
+                                    <ScrollArea className="w-full h-full">
+                                        {isLoadingDormers ? (
+                                            <div className="p-4 space-y-3">
+                                                {[1, 2, 3, 4, 5].map((i) => (
+                                                    <div key={i} className="flex items-center gap-4">
+                                                        <Skeleton className="h-4 w-4" />
+                                                        <div className="flex-1 space-y-2">
+                                                            <Skeleton className="h-4 w-48" />
+                                                            <Skeleton className="h-3 w-64" />
+                                                        </div>
+                                                        <Skeleton className="h-6 w-20" />
                                                     </div>
-                                                    <Skeleton className="h-6 w-20" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : filteredAllDormers.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
-                                            <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
-                                            <p className="font-medium">No dormers found</p>
-                                            <p className="text-sm">Try adjusting your search or filter.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="divide-y">
-                                            {filteredAllDormers.map(d => {
-                                                const isAssigned = assignedIds.has(d.id)
-                                                const isSelected = toAddIds.includes(d.id)
+                                                ))}
+                                            </div>
+                                        ) : filteredAllDormers.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                                                <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
+                                                <p className="font-medium">No dormers found</p>
+                                                <p className="text-sm">Try adjusting your search or filter.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="divide-y">
+                                                {filteredAllDormers.map(d => {
+                                                    const isAssigned = assignedIds.has(d.id)
+                                                    const isSelected = toAddIds.includes(d.id)
 
-                                                return (
-                                                    <div
-                                                        key={d.id}
-                                                        className={`px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted/30'
-                                                            } ${!isAssigned && isSelected ? 'bg-muted/50' : ''}`}
-                                                    >
-                                                        <div className="w-8">
-                                                            <Input
-                                                                type="checkbox"
-                                                                className="w-4 h-4"
-                                                                checked={isAssigned ? true : isSelected}
-                                                                disabled={isAssigned}
-                                                                onChange={() => { if (!isAssigned) toggleToAdd(d.id) }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-medium text-foreground">
-                                                                {d.first_name} {d.last_name}
+                                                    return (
+                                                        <div
+                                                            key={d.id}
+                                                            className={`px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted/30'
+                                                                } ${!isAssigned && isSelected ? 'bg-muted/50' : ''}`}
+                                                        >
+                                                            <div className="w-8">
+                                                                <Input
+                                                                    type="checkbox"
+                                                                    className="w-4 h-4"
+                                                                    checked={isAssigned ? true : isSelected}
+                                                                    disabled={isAssigned}
+                                                                    onChange={() => { if (!isAssigned) toggleToAdd(d.id) }}
+                                                                />
                                                             </div>
-                                                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                                                <span>{d.email}</span>
-                                                                <span>•</span>
-                                                                <span>Room {d.room}</span>
+                                                            <div>
+                                                                <div className="font-medium text-foreground">
+                                                                    {d.first_name} {d.last_name}
+                                                                </div>
+                                                                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                                                    <span>{d.email}</span>
+                                                                    <span>•</span>
+                                                                    <span>Room {d.room}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="w-24 flex justify-center">
+                                                                {isAssigned && (
+                                                                    <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-200 text-xs">
+                                                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                                        Added
+                                                                    </Badge>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <div className="w-24 flex justify-center">
-                                                            {isAssigned && (
-                                                                <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-200 text-xs">
-                                                                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                                    Added
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            <div className="h-10" />
-                                        </div>
-                                    )}
-                                </ScrollArea>
+                                                    );
+                                                })}
+                                                <div className="h-10" />
+                                            </div>
+                                        )}
+                                    </ScrollArea>
+                                </div>
                             </div>
                         </div>
                     </TabsContent>

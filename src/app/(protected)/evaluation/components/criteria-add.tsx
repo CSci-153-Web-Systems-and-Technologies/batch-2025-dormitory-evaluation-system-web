@@ -349,7 +349,7 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                     </div>
                 </div>
 
-                <Tabs defaultValue="criteria" className="flex-1 flex flex-col overflow-hidden">
+                <Tabs defaultValue="criteria" className="flex-1 flex flex-col overflow-hidden min-h-0">
                     <div className="px-6 pt-4">
                         <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
                             <TabsTrigger value="criteria">Current Criteria</TabsTrigger>
@@ -357,7 +357,7 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                         </TabsList>
                     </div>
 
-                    <TabsContent value="criteria" className="flex-1 flex flex-col overflow-hidden p-0 m-0">
+                    <TabsContent value="criteria" className="flex-1 flex flex-col overflow-hidden min-h-0 p-0 m-0">
                         <div className="p-6 pt-4 flex-1 flex flex-col overflow-hidden">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-semibold">Assigned Criteria</h3>
@@ -386,7 +386,7 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                                     <div className="text-center">Max Score</div>
                                     <div className="w-20 text-right">Actions</div>
                                 </div>
-                                <ScrollArea className="h-[calc(80vh-250px)]">
+                                <div className="flex-1 min-h-0"><ScrollArea className="h-full w-full">
                                     {periodCriteria.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
                                             <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
@@ -473,12 +473,12 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                                             })}
                                         </div>
                                     )}
-                                </ScrollArea>
+                                </ScrollArea></div>
                             </div>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="add-criteria" className="flex-1 flex flex-col overflow-hidden p-0 m-0">
+                    <TabsContent value="add-criteria" className="flex-1 flex flex-col overflow-hidden min-h-0 p-0 m-0">
                         <div className="p-6 pt-4 flex-1 flex flex-col overflow-hidden">
                             <div className="flex justify-between items-center mb-4 gap-4">
                                 <div className="relative flex-1 max-w-sm">
@@ -501,7 +501,7 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                                 />
                             </div>
 
-                            <ScrollArea className="h-[calc(80vh-250px)]">
+                            <div className="flex-1 min-h-0"><ScrollArea className="h-full w-full">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
                                     {filteredCriteria.map((crit) => {
                                         const alreadyAdded = periodCriteria.some(pc => pc.criterion_id === crit.id);
@@ -570,7 +570,7 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                                         );
                                     })}
                                 </div>
-                            </ScrollArea>
+                            </ScrollArea></div>
                         </div>
                     </TabsContent>
                 </Tabs>
