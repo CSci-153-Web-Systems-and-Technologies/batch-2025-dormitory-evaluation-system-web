@@ -48,9 +48,9 @@ export function LoginForm({
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Welcome back</CardTitle>
-            <CardDescription>
+          <CardDescription>
             Sign in with your email to continue
-            </CardDescription>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form>
@@ -76,10 +76,10 @@ export function LoginForm({
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" 
-                required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                <Input id="password" type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </Field>
               <Field>
