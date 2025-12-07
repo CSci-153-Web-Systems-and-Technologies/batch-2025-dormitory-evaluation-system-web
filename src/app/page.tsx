@@ -17,9 +17,9 @@ export default function Home() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2 font-bold text-xl">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <ClipboardCheck className="h-5 w-5" />
+                <ClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <span>Dorm Evaluation System</span>
+              <span className="text-base sm:text-xl">Dormitory Evaluation System</span>
             </Link>
           </div>
           <div className="flex items-center gap-4">
