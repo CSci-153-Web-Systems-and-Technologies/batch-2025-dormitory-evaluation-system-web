@@ -5,7 +5,11 @@ import { createClient } from "@/lib/supabase/client"
 import { storeResultsPerDormer } from '@/lib/store-results'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trophy, Medal, Award, TrendingUp, Filter, Search } from "lucide-react"
+import { Trophy, Medal, Award, TrendingUp, Filter, Eye } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ViewRawScore } from "./components/view-raw-score"
+import { SendResults } from "./components/send-results"
+import { BatchSendResults } from "./components/batch-send-results"
 import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
@@ -182,6 +186,16 @@ export default function ResultsPage() {
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">View rankings and performance analysis</p>
                 </div>
+                {selectedPeriodId && filteredAndSortedResults.length > 0 && (
+                    <div className="flex gap-2">
+                        <BatchSendResults
+                            evaluationPeriodId={selectedPeriodId}
+                            results={filteredAndSortedResults}
+                            dormers={dormers}
+                            getRank={getActualRank}
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -305,6 +319,27 @@ export default function ResultsPage() {
                                                 <div className="text-xs text-muted-foreground">
                                                     Total Score
                                                 </div>
+                                            </div>
+                                            <div className="ml-2">
+                                                {dormer && (
+                                                    <ViewRawScore
+                                                        dormer={dormer}
+                                                        evaluation_period_id={selectedPeriodId}
+                                                        trigger={
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                <Eye className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+                                                            </Button>
+                                                        }
+                                                    />
+                                                )}
+                                                {dormer && (
+                                                    <SendResults
+                                                        dormer={dormer}
+                                                        evaluationPeriodId={selectedPeriodId}
+                                                        totalScore={result.total_weighted_score}
+                                                        rank={rank}
+                                                    />
+                                                )}
                                             </div>
                                         </div>
                                     )

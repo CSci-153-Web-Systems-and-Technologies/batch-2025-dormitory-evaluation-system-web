@@ -65,6 +65,26 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
     const [selectedPeriodCriteria, setSelectedPeriodCriteria] = React.useState<PeriodCriteria[]>([]);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
+    const [criteriaToDelete, setCriteriaToDelete] = React.useState<Criteria | null>(null);
+
+    const handleDeleteBaseCriterion = async () => {
+        if (!criteriaToDelete) return;
+
+        const { error } = await supabase.from("criteria").delete().eq("id", criteriaToDelete.id);
+
+        if (error) {
+            console.error("Error deleting criteria:", error);
+            if (error.code === '23503') {
+                toast.error("Cannot delete criteria that is currently in use.");
+            } else {
+                toast.error("Error deleting criteria");
+            }
+        } else {
+            setCriteria(prev => prev.filter(c => c.id !== criteriaToDelete.id));
+            toast.success("Criteria permanently deleted");
+        }
+        setCriteriaToDelete(null);
+    };
 
     const handleDeleteSelectedPeriodCriteria = async () => {
         if (!selectedPeriodCriteria || selectedPeriodCriteria.length === 0) return;
@@ -512,10 +532,21 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                                             <Card key={crit.id} className={`flex flex-col ${alreadyAdded ? 'opacity-60 bg-muted/30' : 'hover:border-primary/50'} transition-all`}>
                                                 <CardHeader className="p-4 pb-2">
                                                     <div className="flex justify-between items-start gap-2">
-                                                        <CardTitleUI className="text-base font-semibold leading-tight">
+                                                        <CardTitleUI className="text-base font-semibold leading-tight flex-1">
                                                             {crit.name}
                                                         </CardTitleUI>
-                                                        {alreadyAdded && <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />}
+                                                        <div className="flex items-center gap-1">
+                                                            {alreadyAdded && <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                                                onClick={() => setCriteriaToDelete(crit)}
+                                                                disabled={alreadyAdded}
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                     <div className="flex gap-2 mt-1">
                                                         <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
@@ -587,6 +618,31 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                             <AlertDialogCancel onClick={closeConfirmDelete}>Cancel</AlertDialogCancel>
                             <AlertDialogAction disabled={isDeleting} onClick={handleDeleteSelectedPeriodCriteria} className="bg-destructive hover:bg-destructive/90">
                                 {isDeleting ? 'Deleting...' : 'Delete'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog open={!!criteriaToDelete} onOpenChange={(open) => !open && setCriteriaToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Delete criteria from system?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently delete "{criteriaToDelete?.name}" from the system. This action cannot be undone.
+                                {criteriaToDelete && periodCriteria.some(pc => pc.criterion_id === criteriaToDelete.id) && (
+                                    <p className="mt-2 text-destructive font-medium">
+                                        Warning: This criteria is currently assigned to this evaluation period!
+                                    </p>
+                                )}
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDeleteBaseCriterion}
+                                className="bg-destructive hover:bg-destructive/90"
+                            >
+                                Delete Permanently
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
