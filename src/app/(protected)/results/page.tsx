@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/client"
 import { storeResultsPerDormer } from '@/lib/store-results'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trophy, Medal, Award, TrendingUp, Filter, Search } from "lucide-react"
+import { Trophy, Medal, Award, TrendingUp, Filter, Eye } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ViewRawScore } from "./components/view-raw-score"
 import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
@@ -305,6 +307,19 @@ export default function ResultsPage() {
                                                 <div className="text-xs text-muted-foreground">
                                                     Total Score
                                                 </div>
+                                            </div>
+                                            <div className="ml-2">
+                                                {dormer && (
+                                                    <ViewRawScore
+                                                        dormer={dormer}
+                                                        evaluation_period_id={selectedPeriodId}
+                                                        trigger={
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                <Eye className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+                                                            </Button>
+                                                        }
+                                                    />
+                                                )}
                                             </div>
                                         </div>
                                     )
