@@ -34,7 +34,7 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
     const [dormers, setDormers] = React.useState<Dormer[]>([])
     const [objectiveCriteria, setObjectiveCriteria] = React.useState<ExtendedPeriodCriteria[]>([])
     const [selectedDormer, setSelectedDormer] = React.useState<Dormer | null>(null)
-    const [scores, setScores] = React.useState<Record<string, number | "">>({})
+    const [scores, setScores] = React.useState<Record<string, string>>({})
     const [isLoading, setIsLoading] = React.useState(false)
     const [isLoadingDormers, setIsLoadingDormers] = React.useState(true)
     const [isLoadingCriteria, setIsLoadingCriteria] = React.useState(true)
@@ -132,9 +132,9 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
             if (error) throw error
 
             if (data) {
-                const newScores: Record<string, number> = {}
+                const newScores: Record<string, string> = {}
                 data.forEach((item: any) => {
-                    newScores[item.period_criteria_id] = item.score
+                    newScores[item.period_criteria_id] = String(item.score)
                 })
                 setScores(newScores)
             }
@@ -146,7 +146,7 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
         }
     }
 
-    const handleScoreChange = (criteriaId: string, value: string | number) => {
+    const handleScoreChange = (criteriaId: string, value: string) => {
         const pc = objectiveCriteria.find((ec) => ec.id === criteriaId)
         const max = pc?.max_score
 
@@ -155,23 +155,16 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
             return
         }
 
-        const numeric = Number(value)
-        if (Number.isNaN(numeric)) {
-            setScores((prev) => ({ ...prev, [criteriaId]: "" }))
-            return
-        }
+        const numeric = parseFloat(value)
+        if (isNaN(numeric)) return
 
-        let v = numeric
-        if (typeof max === "number") {
-            v = Math.max(0, Math.min(v, max))
+        if (typeof max === "number" && numeric > max) {
+            setScores((prev) => ({ ...prev, [criteriaId]: String(max) }))
+        } else if (numeric < 0) {
+            setScores((prev) => ({ ...prev, [criteriaId]: "0" }))
         } else {
-            v = Math.max(0, v)
+            setScores((prev) => ({ ...prev, [criteriaId]: value }))
         }
-
-        setScores((prevScores) => ({
-            ...prevScores,
-            [criteriaId]: v,
-        }))
     }
 
     const handleSave = async () => {
@@ -388,6 +381,7 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
                                             type="number"
                                             min={0}
                                             max={criteria.max_score}
+                                            step="0.01"
                                             value={scores[criteria.id] || ''}
                                             onChange={(e) => handleScoreChange(criteria.id, e.target.value)}
                                             placeholder={`Enter score (0 - ${criteria.max_score})`}
