@@ -307,16 +307,14 @@ export default function EvaluatorPage() {
 
   return (
     <div className="min-h-screen p-4 max-w-3xl mx-auto">
-      {/* Minimal header */}
       <header className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-lg font-semibold">Dormitory Evaluation</h1>
+          <h1 className="text-lg font-semibold">Dormitory Evaluation System</h1>
           <div className="text-xs text-muted-foreground">Evaluator: {periodEvaluatorId ?? "—"}</div>
         </div>
         <Button size="sm" variant="ghost" onClick={() => setExitDialogOpen(true)}>Exit</Button>
       </header>
 
-      {/* Search */}
       <div className="mb-3">
         <div className="flex items-center gap-2">
           <Input
@@ -334,7 +332,6 @@ export default function EvaluatorPage() {
         </div>
       </div>
 
-      {/* Dormer list (minimal cards) */}
       <main>
         <ScrollArea className="max-h-[70vh]">
           <ul className="space-y-2">
