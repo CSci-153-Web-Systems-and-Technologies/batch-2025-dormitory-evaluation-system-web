@@ -12,7 +12,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dormer } from "@/types"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
+import { Loader2, Copy } from "lucide-react"
+import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function ViewRawScore({ dormer, trigger, evaluation_period_id }: { dormer: Dormer, trigger: React.ReactNode, evaluation_period_id: string }) {
@@ -43,13 +44,12 @@ export function ViewRawScore({ dormer, trigger, evaluation_period_id }: { dormer
             if (!criteriaError && criteriaData) {
                 setScores(criteriaData)
             }
-            // Fetch raw subjective scores
             const { data: subData, error: subError } = await supabase
                 .from('subjective_scores')
                 .select(`
                     score,
                     period_evaluator:period_evaluator_id (
-                        dormer:dormer_id (first_name, last_name)
+                        dormer_id
                     ),
                     period_criteria:period_criteria_id (
                         criteria:criterion_id (name)
@@ -62,7 +62,6 @@ export function ViewRawScore({ dormer, trigger, evaluation_period_id }: { dormer
                 setRawSubjective(subData)
             }
 
-            // Fetch raw objective scores
             const { data: objData, error: objError } = await supabase
                 .from('objective_scores')
                 .select(`
@@ -86,18 +85,15 @@ export function ViewRawScore({ dormer, trigger, evaluation_period_id }: { dormer
         }
     }, [dormer.id, evaluation_period_id, supabase])
 
-    // Group subjective scores by evaluator
     const groupedSubjective = React.useMemo(() => {
         const grouped: Record<string, any[]> = {}
         rawSubjective.forEach(score => {
-            const evaluatorName = score.period_evaluator?.dormer ?
-                `${score.period_evaluator.dormer.first_name} ${score.period_evaluator.dormer.last_name}` :
-                'Unknown Evaluator'
+            const evaluatorId = score.period_evaluator?.dormer_id || 'Unknown'
 
-            if (!grouped[evaluatorName]) {
-                grouped[evaluatorName] = []
+            if (!grouped[evaluatorId]) {
+                grouped[evaluatorId] = []
             }
-            grouped[evaluatorName].push(score)
+            grouped[evaluatorId].push(score)
         })
         return grouped
     }, [rawSubjective])
@@ -176,9 +172,23 @@ export function ViewRawScore({ dormer, trigger, evaluation_period_id }: { dormer
                                         {Object.keys(groupedSubjective).length > 0 ? (
                                             <div className="space-y-4">
                                                 <h4 className="font-semibold text-sm text-foreground/80 border-b pb-2">Peer Evaluations</h4>
-                                                {Object.entries(groupedSubjective).map(([evaluator, scores], idx) => (
+                                                {Object.entries(groupedSubjective).map(([evaluatorId, scores], idx) => (
                                                     <div key={idx} className="bg-muted/30 p-3 rounded-lg space-y-2">
-                                                        <p className="font-medium text-sm text-primary">{evaluator}</p>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (evaluatorId !== 'Unknown') {
+                                                                    navigator.clipboard.writeText(evaluatorId)
+                                                                    toast.success("Evaluator ID copied")
+                                                                }
+                                                            }}
+                                                            className="flex items-center gap-2 hover:text-primary transition-colors text-left group/copy"
+                                                            title="Click to copy ID"
+                                                        >
+                                                            <p className="font-medium text-sm text-primary font-mono">
+                                                                {evaluatorId === 'Unknown' ? 'Unknown Evaluator' : evaluatorId.slice(0, 8) + '...'}
+                                                            </p>
+                                                            {evaluatorId !== 'Unknown' && <Copy className="h-3 w-3 opacity-50 group-hover/copy:opacity-100 transition-opacity" />}
+                                                        </button>
                                                         <div className="space-y-1 pl-2">
                                                             {scores.map((score: any, sIdx: number) => (
                                                                 <div key={sIdx} className="flex justify-between items-center text-xs text-muted-foreground">
