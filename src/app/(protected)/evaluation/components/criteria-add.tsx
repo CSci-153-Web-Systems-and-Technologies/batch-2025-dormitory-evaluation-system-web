@@ -44,7 +44,10 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
     const [editLoading, setEditLoading] = React.useState(false);
     const [searchQuery, setSearchQuery] = React.useState("");
 
-    const sumTyped = React.useMemo(() => Object.values(inputWeights).reduce((s, v) => s + (parseInt(v || "0", 10) || 0), 0), [inputWeights]);
+    const sumTyped = React.useMemo(() => {
+        const sum = Object.values(inputWeights).reduce((s, v) => s + (parseFloat(v || "0") || 0), 0);
+        return Number(sum.toFixed(2));
+    }, [inputWeights]);
 
     const editDelta = React.useMemo(() => {
         if (!editingId) return 0;
@@ -52,14 +55,14 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
         if (!pc) return 0;
         const raw = editWeights[editingId];
         if (raw === "" || raw === undefined) return 0;
-        const parsed = parseInt(raw, 10);
+        const parsed = parseFloat(raw);
         if (isNaN(parsed)) return 0;
         return parsed - pc.weight;
     }, [editingId, editWeights, periodCriteria]);
 
     const prospectiveTotal = React.useMemo(() => {
         const total = currentWeight + sumTyped + editDelta;
-        return Math.min(100, Math.max(0, total));
+        return Math.min(100, Math.max(0, Number(total.toFixed(2))));
     }, [currentWeight, sumTyped, editDelta]);
 
     const [selectedPeriodCriteria, setSelectedPeriodCriteria] = React.useState<PeriodCriteria[]>([]);
@@ -127,11 +130,11 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
         if (!pc) return;
         const rawWeight = editWeights[pc.id];
         const rawMax = editMaxScores[pc.id];
-        const weight = parseInt(rawWeight ?? String(pc.weight), 10);
+        const weight = parseFloat(rawWeight ?? String(pc.weight));
         const maxScore = rawMax ? parseInt(rawMax, 10) : null;
         const allowed = Math.max(0, 100 - currentWeight + pc.weight - sumTyped);
-        if (isNaN(weight) || weight < 1) { toast.error("Please enter a valid weight (>= 1)"); return; }
-        if (weight > allowed) { toast.error("Weight cannot exceed remaining percentage"); return; }
+        if (isNaN(weight) || weight <= 0) { toast.error("Please enter a valid weight (> 0)"); return; }
+        if (weight > allowed + 0.001) { toast.error("Weight cannot exceed remaining percentage"); return; }
         if (maxScore !== null && (isNaN(maxScore) || maxScore < 1)) { toast.error("Please enter a valid max score (>= 1)"); return; }
         setEditLoading(true);
         const updates: Partial<PeriodCriteria> = { weight };
@@ -162,13 +165,20 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
 
     const setEditWeightFor = React.useCallback((pcId: string, raw: string) => {
         if (raw === "") { setEditWeights(prev => ({ ...prev, [pcId]: "" })); return; }
-        let n = parseInt(raw, 10);
+        let n = parseFloat(raw);
         if (isNaN(n)) return;
         const pc = periodCriteria.find(p => p.id === pcId);
+        // use small epsilon for float comparison logic if needed, or simple comparison
         const allowed = pc ? Math.max(0, 100 - currentWeight + pc.weight - sumTyped) : 0;
-        if (n > allowed) n = allowed;
+        if (n > allowed + 0.001) n = allowed;
         if (n < 0) n = 0;
-        setEditWeights(prev => ({ ...prev, [pcId]: String(n) }));
+        // Limit to 2 decimal places if user types more? Or just let them type? 
+        // Typically inputs handle step, but if they type 10.555, maybe we truncate? 
+        // For now, let's just checking validity. We verify on save.
+
+        // If we strictly enforce max during typing, it can be annoying if formatting changes (e.g. 10. -> 10.0)
+        // We just update the state.
+        setEditWeights(prev => ({ ...prev, [pcId]: raw }));
     }, [periodCriteria, currentWeight, sumTyped]);
 
     const setEditMaxFor = React.useCallback((pcId: string, raw: string) => {
@@ -284,19 +294,61 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
 
     const getAddAllowed = (critId: string) => {
         const remaining = Math.max(0, 100 - currentWeight);
-        const currentVal = parseInt(inputWeights[critId] || "0", 10) || 0;
+        const currentVal = parseFloat(inputWeights[critId] || "0") || 0;
         const otherTyped = sumTyped - currentVal;
         return Math.max(0, remaining - otherTyped);
     }
 
     const handleWeightChange = React.useCallback((critId: string, raw: string) => {
         if (raw === "") { setInputWeights(prev => ({ ...prev, [critId]: "" })); return; }
-        let n = parseInt(raw, 10);
-        if (isNaN(n)) return;
+        // Allow typing freely, validate on blur or submit? 
+        // The previous code clamped values immediately. 
+        // To support floats like "10.", we shouldn't parse and set back immediately if it changes the string rep.
+        // e.g. "10." -> parseFloat -> 10 -> "10". User cannot type "10.5".
+        // SO: We should just set the raw value in state, but maybe clamp if it exceeds allowed?
+        // Clamping while typing is tricky with partial inputs. 
+        // Let's rely on standard html input constraints and `min`/`max` props for user guidance, 
+        // and only clamp if valid number.
+
+        let n = parseFloat(raw);
+
+        // If it's not a number (and not empty which is handled), ignore? Input type=number usually blocks non-numbers.
+        // However, we can just set the state to raw to allow "0."
+
+        // But we do need to update validation logic.
+        // The original code:
+        // let n = parseInt(raw, 10);
+        // if (n > remaining) n = remaining;
+        // setInputWeights(... String(n))
+
+        // To allow typing "10.5", we cannot reformat "10." to "10" immediately.
+        // We will trust the input to be largely correct but maybe check max.
+
         const remaining = getRemaining();
-        if (n > remaining) n = remaining;
-        if (n < 0) n = 0;
-        setInputWeights(prev => ({ ...prev, [critId]: String(n) }));
+        if (!isNaN(n) && n > remaining + 0.001) {
+            // If they paste a huge number, clamp it.
+            // But if they are typing, maybe we shouldn't clamp forcefully? 
+            // Existing behavior was forceful clamping. I'll stick to it but use Float.
+            n = remaining;
+            // Here is the issue: if I clamp 30 to 20, it becomes 20.
+            // If I type 10.5 and max is 20, 10.5 is fine.
+            // If I type 10. and max is 20, 10. is treated as 10.
+            setInputWeights(prev => ({ ...prev, [critId]: String(n) }));
+            // Wait, if I type "10." -> parseFloat is 10. String(10) is "10". "." is lost.
+            // This prevents typing decimals.
+            // I MUST NOT convert back to string via number if I want to support typing decimals like "10."
+            // So I should simple set raw.
+            // But I still want to enforce max.
+
+            // Strategy: Only clamp if it DEFINITELY exceeds max. 
+            // And pass raw to state unless clamped.
+
+            setInputWeights(prev => ({ ...prev, [critId]: String(n) }));
+            return;
+        }
+
+        // Correct implementation for float typing:
+        setInputWeights(prev => ({ ...prev, [critId]: raw }));
     }, [getRemaining]);
 
     const handleMaxScoreChange = React.useCallback((critId: string, raw: string) => {
@@ -304,11 +356,11 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
     }, []);
 
     const handleAddClick = React.useCallback(async (critId: string) => {
-        const weight = parseInt(inputWeights[critId] || "", 10);
+        const weight = parseFloat(inputWeights[critId] || "");
         const maxScore = parseInt(inputMaxScores[critId] || "", 10);
         const remaining = getRemaining();
-        if (isNaN(weight) || weight < 1) { toast.error("Please enter a valid weight (>= 1)"); return; }
-        if (weight > remaining) { toast.error("Weight cannot exceed remaining percentage"); return; }
+        if (isNaN(weight) || weight <= 0) { toast.error("Please enter a valid weight (> 0)"); return; }
+        if (weight > remaining + 0.001) { toast.error("Weight cannot exceed remaining percentage"); return; }
         if (isNaN(maxScore) || maxScore < 1) { toast.error("Please enter a valid max score (>= 1)"); return; }
         await handleAddCriteria(critId, weight, maxScore);
     }, [getRemaining, handleAddCriteria, inputWeights, inputMaxScores]);
@@ -444,7 +496,8 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                                                                 <Input
                                                                     type="number"
                                                                     className="w-20 h-8 text-center"
-                                                                    min={1}
+                                                                    min={0}
+                                                                    step={0.01}
                                                                     max={allowed}
                                                                     value={editWeights[pc.id] ?? String(pc.weight)}
                                                                     onChange={editWeightHandlers[pc.id]}
@@ -565,7 +618,8 @@ export function CriteriaAdd({ evaluationId, trigger }: { evaluationId: string, t
                                                                 type="number"
                                                                 placeholder="0"
                                                                 className="h-8"
-                                                                min={1}
+                                                                min={0}
+                                                                step={0.01}
                                                                 max={getAddAllowed(crit.id)}
                                                                 value={inputWeights[crit.id] ?? ""}
                                                                 disabled={disableInputs}

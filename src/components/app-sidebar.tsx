@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Users, FileText, BarChart, Settings } from "lucide-react"
+import { Home, Users, FileText, BarChart } from "lucide-react"
 
 import {
   Sidebar,
@@ -26,7 +26,6 @@ const items = [
   { title: "Dormers", url: "/dormers", icon: Users },
   { title: "Evaluation", url: "/evaluation", icon: FileText },
   { title: "Results", url: "/results", icon: BarChart },
-  { title: "Settings", url: "/#", icon: Settings },
 ]
 
 export function AppSidebar() {
@@ -58,7 +57,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={item.title}>
                     <a href={item.url}>
                       <item.icon className="text-primary" />
                       <span>{item.title}</span>

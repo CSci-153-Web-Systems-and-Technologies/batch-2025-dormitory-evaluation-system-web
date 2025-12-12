@@ -68,11 +68,33 @@ export function SendResults({ dormer, evaluationPeriodId, totalScore, rank }: Se
                 score: typeof item.total_score === 'number' ? item.total_score : 0
             }))
 
+            const { data: periodData, error: periodError } = await supabase
+                .from('evaluation_period')
+                .select(`
+                    semester,
+                    school_year:school_year_id (
+                        year
+                    )
+                `)
+                .eq('id', evaluationPeriodId)
+                .single()
+
+            if (periodError || !periodData) {
+                console.error("Error fetching period data:", periodError)
+                throw new Error("Failed to fetch evaluation period details")
+            }
+
+            // @ts-ignore
+            const schoolYear = periodData.school_year?.year || "Unknown Year"
+            const semester = periodData.semester || "Unknown Semester"
+
             const emailHtml = getResultsEmail(
                 `${dormer.first_name} ${dormer.last_name}`,
                 formattedResults,
                 totalScore,
-                rank
+                rank,
+                schoolYear,
+                semester
             )
 
             const response = await fetch("/api/send-email", {
@@ -82,7 +104,7 @@ export function SendResults({ dormer, evaluationPeriodId, totalScore, rank }: Se
                 },
                 body: JSON.stringify({
                     to: dormer.email,
-                    subject: `Evaluation Results`,
+                    subject: `Dormitory Evaluation Results`,
                     html: emailHtml,
                 }),
             });

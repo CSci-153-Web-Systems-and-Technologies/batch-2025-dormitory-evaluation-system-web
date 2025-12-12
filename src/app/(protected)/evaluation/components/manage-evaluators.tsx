@@ -96,7 +96,7 @@ export function ManageEvaluators({ evaluationId, trigger, onSuccess }: { evaluat
                     },
                     body: JSON.stringify({
                         to: email,
-                        subject: "Evaluator Invitation",
+                        subject: "Dormitory Evaluation System",
                         html: getEvaluatorInvitationEmail(routerLink),
                     }),
                 });

@@ -84,7 +84,7 @@ export const getEvaluatorInvitationEmail = (evaluatorLink: string) => {
     `.trim();
 };
 
-export const getResultsEmail = (dormerName: string, criteriaResults: { name: string, score: number, weight: number, description: string }[], totalScore: number, rank: number) => {
+export const getResultsEmail = (dormerName: string, criteriaResults: { name: string, score: number, weight: number, description: string }[], totalScore: number, rank: number, schoolYear: string, semester: string) => {
     const criteriaRows = criteriaResults.map(result => `
         <tr style="border-bottom: 1px solid #e5e7eb;">
             <td style="padding: 12px 0;">
@@ -102,6 +102,8 @@ export const getResultsEmail = (dormerName: string, criteriaResults: { name: str
         </tr>
     `).join('');
 
+    const formattedSemester = semester === "1" ? "1st" :
+        semester === "2" ? "2nd" : semester;
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -121,6 +123,9 @@ export const getResultsEmail = (dormerName: string, criteriaResults: { name: str
                             <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
                                 📊 Evaluation Results
                             </h1>
+                            <p style="margin: 10px 0 0 0; color: #ecfdf5; font-size: 16px;">
+                                S.Y. ${schoolYear} ${formattedSemester} Semester
+                            </p>
                         </td>
                     </tr>
                     
