@@ -68,7 +68,7 @@ export default function EvaluatorPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDormer, setSelectedDormer] = useState<Dormer | null>(null)
   const [extendedCriteria, setExtendedCriteria] = useState<ExtendedPeriodCriteria[]>([])
-  const [scores, setScores] = useState<Record<string, number | "">>({})
+  const [scores, setScores] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [evaluatedDormers, setEvaluatedDormers] = useState<string[]>([])
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -83,7 +83,14 @@ export default function EvaluatorPage() {
   const router = useRouter()
 
   const handleScoreChange = (criteriaId: string, value: string) => {
-    if (!/^\d*$/.test(value)) return
+    if (!/^\d*\.?\d*$/.test(value)) return
+
+    const numericValue = Number(value)
+    if (!Number.isNaN(numericValue) && numericValue < 1 && value !== "") {
+      setScores((prev) => ({ ...prev, [criteriaId]: "1" }))
+      return
+    }
+
 
     const pc = extendedCriteria.find((ec) => ec.id === criteriaId)
     const max = pc?.max_score
@@ -93,16 +100,18 @@ export default function EvaluatorPage() {
       return
     }
 
-    let numeric = Number(value)
+    const numeric = Number(value)
 
-
-    if (typeof max === "number") {
-      if (numeric > max) numeric = max
+    if (typeof max === "number" && !Number.isNaN(numeric)) {
+      if (numeric > max) {
+        setScores((prevScores) => ({ ...prevScores, [criteriaId]: max.toString() }))
+        return
+      }
     }
 
     setScores((prevScores) => ({
       ...prevScores,
-      [criteriaId]: numeric,
+      [criteriaId]: value,
     }))
   }
 
@@ -270,8 +279,8 @@ export default function EvaluatorPage() {
         return
       }
 
-      if (numeric < 0) {
-        toast.error(`Score for "${item.criteria.name}" cannot be negative.`)
+      if (numeric <= 0) {
+        toast.error(`Score for "${item.criteria.name}" must be greater than 0.`)
         setIsLoading(false)
         return
       }
@@ -585,9 +594,8 @@ export default function EvaluatorPage() {
                       <Input
                         id={`criteria-${pc.id}`}
                         type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        placeholder={`0 - ${pc.max_score}`}
+                        inputMode="decimal"
+                        placeholder={`1 - ${pc.max_score}`}
                         value={scores[pc.id] !== undefined ? scores[pc.id] : ""}
                         onChange={(e) => handleScoreChange(pc.id, e.target.value)}
                         className="h-12 text-lg font-medium tabular-nums pl-4"
