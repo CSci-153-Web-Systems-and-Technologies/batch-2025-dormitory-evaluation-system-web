@@ -42,6 +42,28 @@ export function BatchSendResults({ evaluationPeriodId, results, dormers, getRank
         let successCount = 0
         let failCount = 0
 
+        const { data: periodData, error: periodError } = await supabase
+            .from('evaluation_period')
+            .select(`
+                semester,
+                school_year:school_year_id (
+                    year
+                )
+            `)
+            .eq('id', evaluationPeriodId)
+            .single()
+
+        if (periodError || !periodData) {
+            console.error("Error fetching period data:", periodError)
+            toast.error("Failed to fetch evaluation period details")
+            setSending(false)
+            return
+        }
+
+        // @ts-ignore
+        const schoolYear = periodData.school_year?.year || "Unknown Year"
+        const semester = periodData.semester || "Unknown Semester"
+
         for (const result of results) {
             setProgress(prev => ({ ...prev, current: prev.current + 1 }))
 
@@ -85,7 +107,9 @@ export function BatchSendResults({ evaluationPeriodId, results, dormers, getRank
                     `${dormer.first_name} ${dormer.last_name}`,
                     formattedResults,
                     result.total_weighted_score,
-                    getRank(result.id)
+                    getRank(result.id),
+                    schoolYear,
+                    semester
                 )
 
                 const response = await fetch("/api/send-email", {
@@ -95,7 +119,7 @@ export function BatchSendResults({ evaluationPeriodId, results, dormers, getRank
                     },
                     body: JSON.stringify({
                         to: dormer.email,
-                        subject: `Evaluation Results`,
+                        subject: `Dormitory Evaluation System`,
                         html: emailHtml,
                     }),
                 });
