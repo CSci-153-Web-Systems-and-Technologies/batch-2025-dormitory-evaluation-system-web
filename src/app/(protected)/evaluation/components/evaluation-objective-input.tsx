@@ -181,7 +181,7 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
 
             const { error } = await supabase
                 .from('objective_scores')
-                .insert(inserts)
+                .upsert(inserts, { onConflict: 'target_dormer_id,period_criteria_id' })
 
             if (error) throw error
 
