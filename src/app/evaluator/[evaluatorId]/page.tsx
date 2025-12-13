@@ -301,7 +301,7 @@ export default function EvaluatorPage() {
     }))
 
     try {
-      const { error } = await supabase.from("subjective_scores").insert(scoresToInsert)
+      const { error } = await supabase.from("subjective_scores").upsert(scoresToInsert, { onConflict: 'period_evaluator_id,target_dormer_id,period_criteria_id' })
 
       if (error) throw error
 
