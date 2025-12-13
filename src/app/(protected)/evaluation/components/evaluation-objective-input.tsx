@@ -179,11 +179,27 @@ export function EvaluationObjectiveInput({ evaluationId, onSuccess, trigger }: E
                 evaluation_period_id: evaluationId
             }))
 
-            const { error } = await supabase
-                .from('objective_scores')
-                .upsert(inserts, { onConflict: 'target_dormer_id,period_criteria_id' })
+            for (const item of inserts) {
+                const { data: existing } = await supabase
+                    .from('objective_scores')
+                    .select('id')
+                    .eq('target_dormer_id', item.target_dormer_id)
+                    .eq('period_criteria_id', item.period_criteria_id)
+                    .maybeSingle()
 
-            if (error) throw error
+                if (existing) {
+                    const { error: updateError } = await supabase
+                        .from('objective_scores')
+                        .update({ score: item.score })
+                        .eq('id', existing.id)
+                    if (updateError) throw updateError
+                } else {
+                    const { error: insertError } = await supabase
+                        .from('objective_scores')
+                        .insert(item)
+                    if (insertError) throw insertError
+                }
+            }
 
             toast.success(`Scores saved for ${selectedDormer.first_name} ${selectedDormer.last_name}`)
             setIsInputOpen(false)
