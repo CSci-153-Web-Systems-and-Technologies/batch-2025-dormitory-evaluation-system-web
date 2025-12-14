@@ -292,7 +292,7 @@ export default function EvaluatorPage() {
       }
     }
 
-    const scoresToInsert = extendedCriteria.map((item) => ({
+    const scoresToProcess = extendedCriteria.map((item) => ({
       period_criteria_id: item.id,
       period_evaluator_id: periodEvaluatorId,
       target_dormer_id: selectedDormer.id,
@@ -301,9 +301,30 @@ export default function EvaluatorPage() {
     }))
 
     try {
-      const { error } = await supabase.from("subjective_scores").upsert(scoresToInsert, { onConflict: 'period_evaluator_id,target_dormer_id,period_criteria_id' })
+      for (const item of scoresToProcess) {
+        const { data: existing } = await supabase
+          .from("subjective_scores")
+          .select("id")
+          .eq("period_evaluator_id", item.period_evaluator_id)
+          .eq("target_dormer_id", item.target_dormer_id)
+          .eq("period_criteria_id", item.period_criteria_id)
+          .maybeSingle()
 
-      if (error) throw error
+        if (existing) {
+          const { error: updateError } = await supabase
+            .from("subjective_scores")
+            .update({ score: item.score })
+            .eq("id", existing.id)
+
+          if (updateError) throw updateError
+        } else {
+          const { error: insertError } = await supabase
+            .from("subjective_scores")
+            .insert(item)
+
+          if (insertError) throw insertError
+        }
+      }
 
       toast.success("Evaluation submitted successfully!")
       const dormerId = selectedDormer.id
