@@ -25,21 +25,42 @@ export async function storeResultsPerDormer(evaluationPeriodId: string) {
         if (periodCriteriaError) throw periodCriteriaError
         const periodCriteria = periodCriteriaData as ExtendedPeriodCriteria[]
 
-        const { data: subjectiveScoresData, error: subjectiveScoresError } = await supabase
-            .from('subjective_scores')
-            .select('*')
-            .eq('evaluation_period_id', evaluationPeriodId)
+        const subjectiveScores: SubjectiveScores[] = []
+        let subjectivePage = 0
+        const BATCH_SIZE = 1000
 
-        if (subjectiveScoresError) throw subjectiveScoresError
-        const subjectiveScores = subjectiveScoresData as SubjectiveScores[]
+        while (true) {
+            const { data, error } = await supabase
+                .from('subjective_scores')
+                .select('*')
+                .eq('evaluation_period_id', evaluationPeriodId)
+                .range(subjectivePage * BATCH_SIZE, (subjectivePage + 1) * BATCH_SIZE - 1)
 
-        const { data: objectiveScoresData, error: objectiveScoresError } = await supabase
-            .from('objective_scores')
-            .select('*')
-            .eq('evaluation_period_id', evaluationPeriodId)
+            if (error) throw error
 
-        if (objectiveScoresError) throw objectiveScoresError
-        const objectiveScores = objectiveScoresData as ObjectiveScores[]
+            subjectiveScores.push(...(data as SubjectiveScores[]))
+
+            if (data.length < BATCH_SIZE) break
+            subjectivePage++
+        }
+
+        const objectiveScores: ObjectiveScores[] = []
+        let objectivePage = 0
+
+        while (true) {
+            const { data, error } = await supabase
+                .from('objective_scores')
+                .select('*')
+                .eq('evaluation_period_id', evaluationPeriodId)
+                .range(objectivePage * BATCH_SIZE, (objectivePage + 1) * BATCH_SIZE - 1)
+
+            if (error) throw error
+
+            objectiveScores.push(...(data as ObjectiveScores[]))
+
+            if (data.length < BATCH_SIZE) break
+            objectivePage++
+        }
 
         const resultsPerCriteriaData: Omit<ResultsPerCriteria, 'id'>[] = []
 
@@ -72,17 +93,15 @@ export async function storeResultsPerDormer(evaluationPeriodId: string) {
                     rawScore = sumObjectiveScores / objectiveScore.length
                 }
 
-                if (rawScore > 0) {
-                    const normalizedScore = rawScore / pc.max_score
-                    const weightedScore = normalizedScore * pc.weight
+                const normalizedScore = rawScore / pc.max_score
+                const weightedScore = normalizedScore * pc.weight
 
-                    resultsPerCriteriaData.push({
-                        period_criteria_id: pc.id,
-                        target_dormer_id: dormer.id,
-                        total_score: weightedScore,
-                        evaluation_period_id: evaluationPeriodId
-                    })
-                }
+                resultsPerCriteriaData.push({
+                    period_criteria_id: pc.id,
+                    target_dormer_id: dormer.id,
+                    total_score: weightedScore,
+                    evaluation_period_id: evaluationPeriodId
+                })
             }
         }
 
